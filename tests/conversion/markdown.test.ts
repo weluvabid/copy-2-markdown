@@ -77,6 +77,39 @@ describe('htmlToMarkdown', () => {
     expect(markdown).toContain('first line\n\nsecond line  \n```');
   });
 
+  it('converts pre elements without code children and keeps syntax-highlighted text', () => {
+    const markdown = htmlToMarkdown(
+      '<pre class="highlight-source-ts"><span>const answer = 42;</span></pre>',
+      baseUrl,
+    );
+
+    expect(markdown).toContain('```ts');
+    expect(markdown).toContain('const answer = 42;');
+  });
+
+  it('preserves literal script examples as fenced code instead of executable HTML', () => {
+    const markdown = htmlToMarkdown(
+      '<pre><code class="language-svelte">&lt;script lang="ts"&gt;\n  const value = 1;\n&lt;/script&gt;</code></pre>',
+      baseUrl,
+    );
+
+    expect(markdown).toContain('```svelte');
+    expect(markdown).toContain('<script lang="ts">');
+    expect(markdown).toContain('</script>');
+    expect(markdown).not.toContain('\\=');
+  });
+
+  it('does not create unsafe links from protocol-relative or malformed URLs', () => {
+    const markdown = htmlToMarkdown(
+      '<a href="//cdn.example.com/docs">CDN</a><a href="http://[invalid">Broken</a>',
+      baseUrl,
+    );
+
+    expect(markdown).toContain('[CDN](https://cdn.example.com/docs)');
+    expect(markdown).toContain('Broken');
+    expect(markdown).not.toContain('http://[invalid');
+  });
+
   it('uses a longer fence when code contains backticks', () => {
     const markdown = htmlToMarkdown(
       '<pre><code class="language-js">const sample = ```;</code></pre>',

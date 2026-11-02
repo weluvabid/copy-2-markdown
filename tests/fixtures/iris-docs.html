@@ -1,0 +1,19 @@
+<main>
+  <article>
+    <h1>Theme integration</h1>
+    <p>This documentation explains how to integrate the reusable site shell and theme helpers.</p>
+    <h2>Component example</h2>
+    <p>Import the components and configure their navigation links.</p>
+    <pre><code class="language-svelte">&lt;script lang="ts"&gt;
+  import { SiteHeader, SiteFooter } from '@weluvabid/iris/components';
+  let darkMode = $state(false);
+&lt;/script&gt;
+
+&lt;SiteHeader brand="My Project" {darkMode} /&gt;</code></pre>
+    <h2>Plain code without a code element</h2>
+    <pre class="highlight-source-ts"><span>const answer = 42;</span></pre>
+  </article>
+  <script>
+    window.pageTracking = true;
+  </script>
+</main>

@@ -18,11 +18,12 @@ const REMOVED_ELEMENTS = [
   'select',
   'textarea',
   '[hidden]',
-  '[aria-hidden="true"]',
-  '[style*="display:none"]',
-  '[style*="display: none"]',
-  '[style*="visibility:hidden"]',
-  '[style*="visibility: hidden"]',
+  '[aria-hidden="true" i]',
+  '[inert]',
+  '[style*="display:none" i]',
+  '[style*="display: none" i]',
+  '[style*="visibility:hidden" i]',
+  '[style*="visibility: hidden" i]',
 ].join(',');
 
 function cloneSelection(): string {
@@ -68,10 +69,17 @@ function withPageTitle(html: string, title: string): string {
 }
 
 function extractPage(): string {
-  const readerDocument = document.cloneNode(true) as Document;
-  const article = new Readability(readerDocument, {
-    charThreshold: MIN_ARTICLE_TEXT_LENGTH,
-  }).parse();
+  let article: ReturnType<Readability['parse']> = null;
+
+  try {
+    const readerDocument = document.cloneNode(true) as Document;
+
+    article = new Readability(readerDocument, {
+      charThreshold: MIN_ARTICLE_TEXT_LENGTH,
+    }).parse();
+  } catch {
+    // Some malformed or unusual documents can defeat Readability; the cleaned fallback remains usable.
+  }
 
   const articleText = article?.textContent?.trim() ?? '';
 

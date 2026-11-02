@@ -23,20 +23,33 @@ function resolveUrl(
 }
 
 function languageFrom(element: HTMLElement): string {
-  const dataLanguage = element.getAttribute('data-language')?.trim();
+  const dataLanguage =
+    element.getAttribute('data-language')?.trim() ?? element.getAttribute('data-lang')?.trim();
 
   if (dataLanguage && /^[\w+#.-]+$/.test(dataLanguage)) {
     return dataLanguage;
   }
 
   const classNames = [element.className, element.parentElement?.className ?? ''];
-  const classTokens = classNames.flatMap((className) => className.split(/\s+/));
 
-  for (const token of classTokens) {
-    const match = token.match(/^(?:language|lang|highlight)-?([\w+#.-]+)$/i);
+  const prefixes = ['highlight-source-', 'language-', 'lang-', 'highlight-'];
 
-    if (match?.[1] && !['none', 'plain', 'text'].includes(match[1].toLowerCase())) {
-      return match[1];
+  for (const className of classNames) {
+    for (const token of className.split(/\s+/)) {
+      const prefix = prefixes.find((candidate) => token.toLowerCase().startsWith(candidate));
+
+      if (!prefix) {
+        continue;
+      }
+
+      const candidate = token.slice(prefix.length).replace(/^-+/, '');
+
+      if (
+        /^[\w+#.-]+$/.test(candidate) &&
+        !['none', 'plain', 'text'].includes(candidate.toLowerCase())
+      ) {
+        return candidate;
+      }
     }
   }
 
@@ -108,6 +121,7 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
   });
 
   turndown.use(gfm);
+
   turndown.addRule('strikethrough', {
     filter: (node) =>
       node.nodeName === 'DEL' || node.nodeName === 'S' || node.nodeName === 'STRIKE',
@@ -155,20 +169,20 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
     },
   });
 
-  turndown.addRule('languageCodeBlocks', {
-    filter(node, _options) {
-      return node.nodeName === 'PRE' && Boolean((node as HTMLElement).querySelector('code'));
-    },
+  turndown.addRule('fencedCodeBlocks', {
+    filter: 'pre',
+
     replacement(_content, node) {
       const pre = node as HTMLElement;
       const code = pre.querySelector('code');
 
-      if (!code) {
+      const language = (code ? languageFrom(code) : '') || languageFrom(pre);
+      const text = (code ?? pre).textContent?.replace(/\n+$/, '') ?? '';
+
+      if (!text) {
         return '';
       }
 
-      const language = languageFrom(code) || languageFrom(pre);
-      const text = code.textContent?.replace(/\n+$/, '') ?? '';
       let longestFence = 0;
 
       for (const [run] of text.matchAll(/`+/g)) {

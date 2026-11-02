@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { extractContent, extractFallbackContent } from '../../src/content/extraction';
+import { htmlToMarkdown } from '../../src/conversion/markdown';
 
 const articleText =
   'A substantial article paragraph with enough words to pass the readability threshold. It explains the important details of the subject and gives readers useful context.';
@@ -50,6 +53,25 @@ describe('extractContent', () => {
     expect(html).toContain(articleText);
     expect(html).not.toContain('window.unwanted');
     expect(html).not.toContain('Interactive control');
+  });
+
+  it('removes executable page scripts but preserves script examples inside documentation code blocks', () => {
+    document.body.innerHTML = readFileSync(
+      resolve(import.meta.dirname, '../fixtures/iris-docs.html'),
+      'utf8',
+    );
+
+    const extracted = extractFallbackContent();
+    const markdown = htmlToMarkdown(extracted, 'https://docs.example.com/iris');
+
+    expect(extracted).not.toContain('window.pageTracking');
+    expect(markdown).toContain('```svelte');
+    expect(markdown).toContain('<script lang="ts">');
+    expect(markdown).toContain(
+      "import { SiteHeader, SiteFooter } from '@weluvabid/iris/components';",
+    );
+    expect(markdown).toContain('```ts');
+    expect(markdown).toContain('const answer = 42;');
   });
 
   it('extracts only the explicit DOM selection', () => {
