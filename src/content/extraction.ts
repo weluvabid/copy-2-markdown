@@ -1,26 +1,9 @@
 import { Readability } from '@mozilla/readability';
 import type { ExtractionMode } from '../shared/messages';
+import { removalPolicies, visuallyHiddenUtilitySelectors } from './filtering';
 
 const MIN_ARTICLE_TEXT_LENGTH = 80;
 const MAX_EXTRACTED_HTML_LENGTH = 5_000_000;
-const REMOVED_ELEMENTS = [
-  'script',
-  'style',
-  'noscript',
-  'template',
-  'iframe',
-  'object',
-  'embed',
-  'canvas',
-  'form',
-  'button',
-  'input:not([type=checkbox])',
-  'select',
-  'textarea',
-  '[hidden]',
-  '[aria-hidden="true" i]',
-  '[inert]',
-].join(',');
 
 function cloneSelection(): string {
   const selection = window.getSelection();
@@ -41,15 +24,42 @@ function cloneSelection(): string {
 function isVisuallyHidden(element: Element): boolean {
   const style = window.getComputedStyle(element);
 
-  return (
+  if (
     style.display === 'none' ||
     style.visibility === 'hidden' ||
     style.visibility === 'collapse' ||
-    style.contentVisibility === 'hidden'
+    style.contentVisibility === 'hidden' ||
+    Number.parseFloat(style.opacity) === 0
+  ) {
+    return true;
+  }
+
+  const width = Number.parseFloat(style.width);
+  const height = Number.parseFloat(style.height);
+  const hasTinyBox = Number.isFinite(width) && Number.isFinite(height) && width <= 1 && height <= 1;
+  const clipsOverflow =
+    ['hidden', 'clip'].includes(style.overflow) ||
+    ['hidden', 'clip'].includes(style.overflowX) ||
+    ['hidden', 'clip'].includes(style.overflowY);
+  const hasClipPath = style.clipPath !== 'none' && /inset\(\s*(?:50%|100%)/i.test(style.clipPath);
+  const clip = style.clip.replace(/\s+/g, '').toLowerCase();
+  const hasZeroClip = /^rect\(0(?:px)?,0(?:px)?,0(?:px)?,0(?:px)?\)$/.test(clip);
+  const hasVisuallyHiddenUtility = visuallyHiddenUtilitySelectors.some((selector) =>
+    element.matches(selector),
   );
+
+  // Covers common visually-hidden utility recipes without treating tiny elements,
+  // absolute positioning, clipping, or class names as sufficient on their own.
+  const hasClassicVisuallyHiddenPattern =
+    hasTinyBox &&
+    (style.position === 'absolute' || style.position === 'fixed') &&
+    clipsOverflow &&
+    (hasClipPath || hasZeroClip || (hasVisuallyHiddenUtility && style.whiteSpace === 'nowrap'));
+
+  return hasClipPath || hasZeroClip || hasClassicVisuallyHiddenPattern;
 }
 
-function removeVisuallyHiddenElements(source: HTMLElement, clone: HTMLElement): void {
+function removeDocumentNoise(source: HTMLElement, clone: HTMLElement): void {
   const sourceElements = source.querySelectorAll('*');
   const clonedElements = clone.querySelectorAll('*');
   const count = Math.min(sourceElements.length, clonedElements.length);
@@ -68,13 +78,18 @@ function removeVisuallyHiddenElements(source: HTMLElement, clone: HTMLElement): 
       clonedElement.remove();
     }
   }
+
+  for (const policy of removalPolicies) {
+    for (const selector of policy.selectors) {
+      clone.querySelectorAll(selector).forEach((element) => element.remove());
+    }
+  }
 }
 
 export function extractFallbackContent(): string {
   const clone = document.body.cloneNode(true) as HTMLElement;
 
-  removeVisuallyHiddenElements(document.body, clone);
-  clone.querySelectorAll(REMOVED_ELEMENTS).forEach((element) => element.remove());
+  removeDocumentNoise(document.body, clone);
 
   // Prefer semantic content roots without aggressively stripping documentation navigation.
   const root = clone.querySelector('main, article, [role="main"]');
@@ -108,7 +123,7 @@ function extractPage(): string {
     // computed styles before parsing, so hidden content is excluded from both
     // the primary and fallback extraction paths.
     if (document.body && readerDocument.body) {
-      removeVisuallyHiddenElements(document.body, readerDocument.body);
+      removeDocumentNoise(document.body, readerDocument.body);
     }
 
     article = new Readability(readerDocument, {

@@ -10,12 +10,25 @@ const fixtureHtml = `<!doctype html>
 <head>
   <meta charset="utf-8">
   <title>Engineering Notes</title>
-  <style>.css-hidden { display: none !important; }</style>
+  <style>
+    .css-hidden { display: none !important; }
+    .cdk-visually-hidden {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+  </style>
 </head>
 <body>
   <main>
     <article>
-      <h1>Engineering Notes</h1>
+      <h1>Engineering Notes</h1>\n      <p class="cdk-visually-hidden">Duplicate accessible label that must not be copied.</p>
       <p>This article explains a reliable approach to browser automation, content extraction, and deterministic testing.</p>
       <h2>Implementation</h2>
       <p>Keep the browser-facing layer small, preserve semantic structure, and validate the resulting Markdown rather than relying on visual appearance alone.</p>
@@ -232,6 +245,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     expect(markdown).toContain('# Engineering Notes');
     expect(markdown).toContain('## Implementation');
     expect(markdown).toContain('reliable approach to browser automation');
+    expect(markdown).not.toContain('Duplicate accessible label that must not be copied');
     expect(markdown).toContain('```typescript');
 
     // Explicitly inject a second time to exercise the content-script idempotency guard.
@@ -274,7 +288,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     const { target, popup } = await openHarnessPage();
 
     await target.evaluate(() => {
-      const paragraph = document.querySelector('main article p');
+      const paragraph = document.querySelector('main article p:not(.cdk-visually-hidden)');
 
       if (!paragraph?.firstChild) {
         throw new Error('Selection fixture paragraph is missing.');

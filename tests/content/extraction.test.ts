@@ -61,7 +61,7 @@ describe('extractContent', () => {
         <p style="display : none !important">Hidden display content.</p>
         <p style="visibility: hidden">Hidden visibility content.</p>
         <p style="color: red">Visible styled documentation content.</p>
-        <p aria-hidden="true">Accessibility-hidden content.</p>
+        <p aria-hidden="true">Visible accessibility-hidden content.</p>
         <p inert>Inert content.</p>
         <p>${articleText}</p>
       </main>
@@ -71,10 +71,54 @@ describe('extractContent', () => {
 
     expect(html).not.toContain('Hidden display content');
     expect(html).not.toContain('Hidden visibility content');
-    expect(html).not.toContain('Accessibility-hidden content');
+    expect(html).toContain('Visible accessibility-hidden content');
     expect(html).not.toContain('Inert content');
     expect(html).toContain('Visible styled documentation content');
     expect(html).toContain(articleText);
+  });
+
+  it('removes framework visually-hidden utilities only when their computed styles conceal them', () => {
+    const stylesheet = document.createElement('style');
+
+    stylesheet.textContent = `
+      .cdk-visually-hidden {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
+      }
+      .not-sr-only {
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        overflow: visible !important;
+        clip: auto !important;
+        white-space: normal !important;
+      }
+    `;
+    document.head.append(stylesheet);
+    document.body.innerHTML = `
+      <main>
+        <p class="cdk-visually-hidden">Screen reader duplicate content.</p>
+        <p class="sr-only not-sr-only">Visible overridden utility content.</p>
+        <p>${articleText}</p>
+      </main>
+    `;
+
+    try {
+      const html = extractFallbackContent();
+
+      expect(html).not.toContain('Screen reader duplicate content');
+      expect(html).toContain('Visible overridden utility content');
+      expect(html).toContain(articleText);
+    } finally {
+      stylesheet.remove();
+    }
   });
 
   it('removes elements hidden by stylesheet rules and hidden ancestors', () => {
@@ -110,6 +154,24 @@ describe('extractContent', () => {
     } finally {
       stylesheet.remove();
     }
+  });
+
+  it('removes explicit interface controls without discarding meaningful alert content', () => {
+    document.body.innerHTML = `
+      <main>
+        <p>${articleText}</p>
+        <div role="toolbar"><button>Toolbar action</button></div>
+        <div class="copy-button">Copy code control</div>
+        <div role="alert">Important document warning remains.</div>
+      </main>
+    `;
+
+    const html = extractFallbackContent();
+
+    expect(html).not.toContain('Toolbar action');
+    expect(html).not.toContain('Copy code control');
+    expect(html).toContain('Important document warning remains.');
+    expect(html).toContain(articleText);
   });
 
   it('counts fallback content from parsed text rather than stripping tags with a regex', () => {
