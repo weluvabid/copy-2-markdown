@@ -37,6 +37,36 @@ describe('htmlToMarkdown adversarial cases', () => {
     expect(markdown).toContain('A \\| B \\| C');
   });
 
+  it('keeps table boundaries with whitespace text nodes and multiple body rows', () => {
+    const markdown = htmlToMarkdown(
+      `<table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Expression</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cache</td>
+            <td>A | B | C</td>
+          </tr>
+          <tr>
+            <td>Queue</td>
+            <td>D | E</td>
+          </tr>
+        </tbody>
+      </table>`,
+      baseUrl,
+    );
+    const tables = nodesOfType(parseMarkdownAst(markdown), 'table');
+
+    expect(tables).toHaveLength(1);
+    expect(markdown).toContain('| Name | Expression |');
+    expect(markdown).toContain('| Cache | A \\| B \\| C |');
+    expect(markdown).toContain('| Queue | D \\| E |');
+  });
+
   it('preserves link destinations, relative resolution and title attributes', () => {
     const markdown = htmlToMarkdown(
       '<p><a href="../api" title="API reference">Relative</a> <a href="https://example.org/path?q=one&amp;x=two" title="External docs">Absolute</a></p>',

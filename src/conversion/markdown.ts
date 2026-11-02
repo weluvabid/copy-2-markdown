@@ -56,6 +56,30 @@ function languageFrom(element: HTMLElement): string {
   return '';
 }
 
+function escapeTablePipes(value: string): string {
+  let escaped = '';
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+
+    if (character === '|') {
+      let precedingBackslashes = 0;
+
+      for (let cursor = index - 1; cursor >= 0 && value[cursor] === '\\'; cursor -= 1) {
+        precedingBackslashes += 1;
+      }
+
+      if (precedingBackslashes % 2 === 0) {
+        escaped += '\\';
+      }
+    }
+
+    escaped += character;
+  }
+
+  return escaped;
+}
+
 function formatMarkdownTitle(value: string): string {
   const normalized = value.replace(/\s+/g, ' ').trim();
 
@@ -211,12 +235,14 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
     },
   });
 
-  // Register after the GFM plugin and other rules so this cell serializer wins
-  // over the plugin's default table-cell rule.
+  // Mirror the GFM plugin's cell delimiters, but use firstElementChild so
+  // indentation text nodes inside <tr> do not hide the first cell.
+  // The plugin itself determines the first cell using childNodes indexes,
+  // which can be thrown off by whitespace-only text nodes.
   turndown.addRule('safeTableCells', {
     filter: ['th', 'td'],
     replacement(content, node) {
-      const escaped = content.replace(/(?<!\\)\|/g, '\\|');
+      const escaped = escapeTablePipes(content);
       const isFirstCell = node.parentNode?.firstElementChild === node;
 
       return `${isFirstCell ? '| ' : ' '}${escaped} |`;
