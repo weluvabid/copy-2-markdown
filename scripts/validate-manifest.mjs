@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const distDirectory = resolve(import.meta.dirname, '../dist');
@@ -32,6 +32,22 @@ if (manifest.background?.service_worker) {
 if (manifest.action?.default_popup) {
   await assertFile(manifest.action.default_popup, 'popup');
 }
+
+for (const script of manifest.content_scripts ?? []) {
+  for (const file of script.js ?? []) {
+    await assertFile(file, 'content script');
+  }
+}
+
+await assertFile('content.js', 'injected content script');
+await assertFile('assets/fonts/LICENSE.txt', 'Atkinson Hyperlegible font licence');
+
+const assetFiles = await readdir(resolve(distDirectory, 'assets'));
+
+assert(
+  assetFiles.filter((file) => file.endsWith('.otf')).length >= 2,
+  'both font weights must be included in the build',
+);
 
 for (const [size, iconPath] of Object.entries(manifest.icons ?? {})) {
   assert(['16', '32', '48', '128'].includes(size), `unsupported icon size: ${size}`);

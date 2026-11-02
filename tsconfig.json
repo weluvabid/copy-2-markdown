@@ -16,5 +16,11 @@
     "types": ["chrome", "node", "vite/client"],
     "lib": ["ES2022", "DOM"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "vite.config.ts",
+    "vite.content.config.ts",
+    "vitest.config.ts"
+  ]
 }

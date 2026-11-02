@@ -3,12 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Extension</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>Copy 2 Markdown</title>
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
-    <main>
-      <h1>Hello, world!</h1>
+    <main class="popup" aria-labelledby="title">
+      <header class="header">
+        <div class="mark" aria-hidden="true">M↓</div>
+        <div class="heading">
+          <h1 id="title">Copy 2 Markdown</h1>
+          <p>Clean Markdown. One click.</p>
+        </div>
+      </header>
+      <section class="actions" aria-label="Copy actions">
+        <button class="action action-primary" type="button" data-action="page">
+          <span>Copy page</span><span class="action-symbol" aria-hidden="true">↓</span>
+        </button>
+        <button class="action" type="button" data-action="selection">
+          <span>Copy selection</span><span class="action-symbol" aria-hidden="true">↗</span>
+        </button>
+        <button class="action" type="button" data-action="link">
+          <span>Copy link</span><span class="action-symbol" aria-hidden="true">↗</span>
+        </button>
+      </section>
+      <p id="status" class="status" role="status" aria-live="polite">Ready when you are.</p>
     </main>
     <script type="module" src="./index.ts"></script>
   </body>

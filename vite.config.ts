@@ -9,7 +9,7 @@ export default defineConfig({
   publicDir: resolve(projectRoot, 'public'),
   build: {
     outDir: resolve(projectRoot, 'dist'),
-    emptyOutDir: true,
+    emptyOutDir: false,
     sourcemap: false,
     minify: true,
     target: 'es2022',
