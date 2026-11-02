@@ -27,13 +27,20 @@ pnpm dev
 
 `pnpm dev` rebuilds `dist/` on changes. Load `dist/` as an unpacked extension from `chrome://extensions` and reload it after rebuilds.
 
-## Quality checks and production build
+## Quality checks and browser tests
 
 ```sh
 pnpm check
+pnpm exec playwright install chromium
+pnpm build
+pnpm test:browser
 ```
 
-The check runs ESLint, Prettier, TypeScript, Vitest, the production build, and manifest/build validation.
+`pnpm check` runs ESLint, Prettier, TypeScript, Vitest, the production build, and manifest/build validation. The Playwright suite loads the built MV3 extension in Chromium and exercises the popup, content-script injection, extraction, selection, and clipboard against a local fixture server.
+
+The browser harness creates a temporary copy of `dist/` and adds a host permission restricted to its ephemeral `127.0.0.1` fixture origin. The production manifest and build output are never modified. Browser tests require the Chromium binary installed by Playwright.
+
+Git hooks run the fast quality checks before commits and the production build plus Chromium acceptance suite before pushes. CI is intentionally disabled; the local hooks are the project's enforcement gate.
 
 ## Permissions
 

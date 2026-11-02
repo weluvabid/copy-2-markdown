@@ -103,8 +103,17 @@ function extractPage(): string {
   try {
     const readerDocument = document.cloneNode(true) as Document;
 
+    // Readability operates on a detached document and cannot evaluate computed
+    // styles itself. Remove visually hidden nodes using the live document's
+    // computed styles before parsing, so hidden content is excluded from both
+    // the primary and fallback extraction paths.
+    if (document.body && readerDocument.body) {
+      removeVisuallyHiddenElements(document.body, readerDocument.body);
+    }
+
     article = new Readability(readerDocument, {
       charThreshold: MIN_ARTICLE_TEXT_LENGTH,
+      keepClasses: true,
     }).parse();
   } catch {
     // Some malformed or unusual documents can defeat Readability; the cleaned fallback remains usable.

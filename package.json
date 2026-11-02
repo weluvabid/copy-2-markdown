@@ -20,7 +20,9 @@
     "test": "vitest run",
     "check": "pnpm lint && pnpm format:check && pnpm check:types && pnpm test && pnpm build",
     "precommit": "pnpm lint && pnpm format:check && pnpm check:types && pnpm test",
-    "prepare": "sh ./scripts/install-hooks.sh"
+    "prepare": "sh ./scripts/install-hooks.sh",
+    "test:browser": "playwright test",
+    "prepush": "pnpm build && pnpm test:browser"
   },
   "devDependencies": {
     "@eslint/js": "9.39.0",
