@@ -122,6 +122,15 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
 
   turndown.use(gfm);
 
+  turndown.addRule('safeTableCells', {
+    filter: ['th', 'td'],
+    replacement(content) {
+      const escaped = content.replace(/(?<!\\)\|/g, '\\|');
+
+      return ` ${escaped} |`;
+    },
+  });
+
   turndown.addRule('strikethrough', {
     filter: (node) =>
       node.nodeName === 'DEL' || node.nodeName === 'S' || node.nodeName === 'STRIKE',
