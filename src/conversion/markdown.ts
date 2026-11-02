@@ -56,8 +56,24 @@ function languageFrom(element: HTMLElement): string {
   return '';
 }
 
-function escapeMarkdownTitle(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\s+/g, ' ');
+function formatMarkdownTitle(value: string): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+
+  if (!normalized) {
+    return '';
+  }
+
+  const escaped = normalized.replace(/\\/g, '\\\\');
+
+  if (!normalized.includes('"')) {
+    return `"${escaped}"`;
+  }
+
+  if (!normalized.includes("'")) {
+    return `'${escaped}'`;
+  }
+
+  return `"${escaped.replace(/"/g, '\\"')}"`;
 }
 
 function normalizeMarkdown(markdown: string): string {
@@ -122,15 +138,6 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
 
   turndown.use(gfm);
 
-  turndown.addRule('safeTableCells', {
-    filter: ['th', 'td'],
-    replacement(content) {
-      const escaped = content.replace(/(?<!\\)\|/g, '\\|');
-
-      return ` ${escaped} |`;
-    },
-  });
-
   turndown.addRule('strikethrough', {
     filter: (node) =>
       node.nodeName === 'DEL' || node.nodeName === 'S' || node.nodeName === 'STRIKE',
@@ -152,7 +159,7 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
       const href = resolvedHref.replace(/[()]/g, (character) =>
         character === '(' ? '%28' : '%29',
       );
-      const title = anchor.title ? ` "${escapeMarkdownTitle(anchor.title)}"` : '';
+      const title = anchor.title ? ` ${formatMarkdownTitle(anchor.title)}` : '';
 
       return content.trim() ? `[${content}](${href}${title})` : '';
     },
@@ -172,7 +179,7 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
       const alt = (image.getAttribute('alt') ?? '')
         .replace(/\\/g, '\\\\')
         .replace(/[[\]]/g, '\\$&');
-      const title = image.title ? ` "${escapeMarkdownTitle(image.title)}"` : '';
+      const title = image.title ? ` ${formatMarkdownTitle(image.title)}` : '';
 
       return `![${alt}](${src}${title})`;
     },
@@ -201,6 +208,18 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
       const fence = '`'.repeat(Math.max(3, longestFence + 1));
 
       return `\n\n${fence}${language}\n${text}\n${fence}\n\n`;
+    },
+  });
+
+  // Register after the GFM plugin and other rules so this cell serializer wins
+  // over the plugin's default table-cell rule.
+  turndown.addRule('safeTableCells', {
+    filter: ['th', 'td'],
+    replacement(content, node) {
+      const escaped = content.replace(/(?<!\\)\|/g, '\\|');
+      const isFirstCell = node.parentNode?.firstElementChild === node;
+
+      return `${isFirstCell ? '| ' : ' '}${escaped} |`;
     },
   });
 

@@ -27,14 +27,14 @@ describe('htmlToMarkdown adversarial cases', () => {
 
   it('preserves table alignment and escapes pipes inside cell content', () => {
     const markdown = htmlToMarkdown(
-      '<table><thead><tr><th align="left">Name</th><th align="right">Count</th><th align="center">Expression</th></tr></thead><tbody><tr><td>Cache</td><td>42</td><td>A | B</td></tr></tbody></table>',
+      '<table><thead><tr><th align="left">Name</th><th align="right">Count</th><th align="center">Expression</th></tr></thead><tbody><tr><td>Cache</td><td>42</td><td>A | B | C</td></tr></tbody></table>',
       baseUrl,
     );
     const tables = nodesOfType(parseMarkdownAst(markdown), 'table');
 
     expect(tables).toHaveLength(1);
     expect(tables[0]?.['align']).toEqual(['left', 'right', 'center']);
-    expect(markdown).toContain('A \\| B');
+    expect(markdown).toContain('A \\| B \\| C');
   });
 
   it('preserves link destinations, relative resolution and title attributes', () => {
@@ -122,7 +122,7 @@ describe('htmlToMarkdown adversarial cases', () => {
 
   it('escapes destination parentheses and quoted title punctuation', () => {
     const markdown = htmlToMarkdown(
-      '<a href="/guide/(advanced)" title="A \\"quoted\\" title">Advanced guide</a>',
+      '<a href="/guide/(advanced)" title="A &quot;quoted&quot; title">Advanced guide</a>',
       baseUrl,
     );
     const links = nodesOfType(parseMarkdownAst(markdown), 'link');
@@ -130,6 +130,38 @@ describe('htmlToMarkdown adversarial cases', () => {
     expect(links).toHaveLength(1);
     expect(links[0]?.['url']).toBe('https://docs.example.com/guide/%28advanced%29');
     expect(links[0]?.['title']).toBe('A "quoted" title');
+  });
+
+  it('round-trips link titles containing quote and backslash combinations', () => {
+    const cases = [
+      ['Double quotes', 'A "quoted" title'],
+      ['Single quotes', "A 'quoted' title"],
+      ['Both quote types', 'A "double" and \'single\' title'],
+      ['Backslash', String.raw`A \\ path`],
+    ] as const;
+
+    for (const [label, title] of cases) {
+      const escapedTitle = title.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      const markdown = htmlToMarkdown(
+        `<a href="/guide" title="${escapedTitle}">${label}</a>`,
+        baseUrl,
+      );
+      const link = nodesOfType(parseMarkdownAst(markdown), 'link')[0];
+
+      expect(link?.['title'], label).toBe(title);
+    }
+  });
+
+  it('round-trips image titles containing quotes and backslashes', () => {
+    const title = 'A "diagram" and \'source\' \\ reference';
+    const htmlTitle = title.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const markdown = htmlToMarkdown(
+      `<img src="/diagram.svg" alt="Architecture" title="${htmlTitle}">`,
+      baseUrl,
+    );
+    const image = nodesOfType(parseMarkdownAst(markdown), 'image')[0];
+
+    expect(image?.['title']).toBe(title);
   });
 
   it('preserves Unicode, non-breaking spaces and normalized source line endings', () => {

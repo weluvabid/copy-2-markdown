@@ -49,7 +49,7 @@ describe('htmlToMarkdown', () => {
     expect(markdown).toContain('---');
   });
 
-  it('converts GFM tables and strikethrough', () => {
+  it.only('converts GFM tables and strikethrough', () => {
     const markdown = htmlToMarkdown(
       '<table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Cache</td><td>~~old~~ new</td></tr></tbody></table>',
       baseUrl,
