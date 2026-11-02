@@ -80,10 +80,13 @@ async function copyLink(): Promise<void> {
 
   try {
     const tab = await getActiveTab();
-    const title = (tab.title ?? tab.url ?? 'Link').replace(/\\/g, '\\\\').replace(/[[\]]/g, '\\$&');
-    const url = encodeURI(tab.url).replace(/[()]/g, (character) =>
-      character === '(' ? '%28' : '%29',
-    );
+    const title = (tab.title ?? tab.url ?? 'Link')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\\/g, '\\\\')
+      .replace(/[[\]]/g, '\\$&');
+    const parsedUrl = new URL(tab.url);
+    const url = parsedUrl.href.replace(/[()]/g, (character) => (character === '(' ? '%28' : '%29'));
 
     await navigator.clipboard.writeText(`[${title}](${url})`);
     setStatus('Markdown link copied.', 'success');

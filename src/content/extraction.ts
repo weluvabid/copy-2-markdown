@@ -20,7 +20,6 @@ const REMOVED_ELEMENTS = [
   '[hidden]',
   '[aria-hidden="true" i]',
   '[inert]',
-  '[style]',
 ].join(',');
 
 function cloneSelection(): string {
@@ -40,24 +39,42 @@ function cloneSelection(): string {
 }
 
 function isVisuallyHidden(element: Element): boolean {
-  const style = (element as HTMLElement).style;
+  const style = window.getComputedStyle(element);
 
   return (
-    style.display.toLowerCase() === 'none' ||
-    ['hidden', 'collapse'].includes(style.visibility.toLowerCase())
+    style.display === 'none' ||
+    style.visibility === 'hidden' ||
+    style.visibility === 'collapse' ||
+    style.contentVisibility === 'hidden'
   );
+}
+
+function removeVisuallyHiddenElements(source: HTMLElement, clone: HTMLElement): void {
+  const sourceElements = source.querySelectorAll('*');
+  const clonedElements = clone.querySelectorAll('*');
+  const count = Math.min(sourceElements.length, clonedElements.length);
+
+  // Deep cloning preserves element order, allowing computed styles to be read
+  // from the live document without attaching the clone or executing page code.
+  for (let index = 0; index < count; index += 1) {
+    const sourceElement = sourceElements[index];
+    const clonedElement = clonedElements[index];
+
+    if (!sourceElement || !clonedElement || !clone.contains(clonedElement)) {
+      continue;
+    }
+
+    if (isVisuallyHidden(sourceElement)) {
+      clonedElement.remove();
+    }
+  }
 }
 
 export function extractFallbackContent(): string {
   const clone = document.body.cloneNode(true) as HTMLElement;
 
-  clone.querySelectorAll(REMOVED_ELEMENTS).forEach((element) => {
-    if (element.matches('[style]') && !isVisuallyHidden(element)) {
-      return;
-    }
-
-    element.remove();
-  });
+  removeVisuallyHiddenElements(document.body, clone);
+  clone.querySelectorAll(REMOVED_ELEMENTS).forEach((element) => element.remove());
 
   // Prefer semantic content roots without aggressively stripping documentation navigation.
   const root = clone.querySelector('main, article, [role="main"]');

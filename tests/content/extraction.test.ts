@@ -77,6 +77,41 @@ describe('extractContent', () => {
     expect(html).toContain(articleText);
   });
 
+  it('removes elements hidden by stylesheet rules and hidden ancestors', () => {
+    const stylesheet = document.createElement('style');
+
+    stylesheet.textContent = `
+      .stylesheet-hidden { display: none !important; }
+      .visibility-hidden { visibility: hidden; }
+      .content-hidden { content-visibility: hidden; }
+    `;
+    document.head.append(stylesheet);
+
+    document.body.innerHTML = `
+      <main>
+        <p class="stylesheet-hidden">Hidden by stylesheet.</p>
+        <section class="visibility-hidden">
+          <p>Hidden through an ancestor.</p>
+        </section>
+        <p class="content-hidden">Hidden by content visibility.</p>
+        <p class="visible-with-class">Visible content remains.</p>
+        <p>${articleText}</p>
+      </main>
+    `;
+
+    try {
+      const html = extractFallbackContent();
+
+      expect(html).not.toContain('Hidden by stylesheet');
+      expect(html).not.toContain('Hidden through an ancestor');
+      expect(html).not.toContain('Hidden by content visibility');
+      expect(html).toContain('Visible content remains');
+      expect(html).toContain(articleText);
+    } finally {
+      stylesheet.remove();
+    }
+  });
+
   it('counts fallback content from parsed text rather than stripping tags with a regex', () => {
     document.body.innerHTML = `
       <main>

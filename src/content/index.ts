@@ -2,6 +2,16 @@ import { extractContent } from './extraction';
 import type { ExtractRequest, ExtractResponse } from '../shared/messages';
 
 (function copy2MarkdownContentScript() {
+  const contentWindow = window as Window & {
+    __copy2MarkdownContentScriptInstalled?: boolean;
+  };
+
+  if (contentWindow.__copy2MarkdownContentScriptInstalled) {
+    return;
+  }
+
+  contentWindow.__copy2MarkdownContentScriptInstalled = true;
+
   function isExtractRequest(message: unknown): message is ExtractRequest {
     if (typeof message !== 'object' || message === null) {
       return false;
