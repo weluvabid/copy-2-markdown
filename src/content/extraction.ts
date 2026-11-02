@@ -20,10 +20,7 @@ const REMOVED_ELEMENTS = [
   '[hidden]',
   '[aria-hidden="true" i]',
   '[inert]',
-  '[style*="display:none" i]',
-  '[style*="display: none" i]',
-  '[style*="visibility:hidden" i]',
-  '[style*="visibility: hidden" i]',
+  '[style]',
 ].join(',');
 
 function cloneSelection(): string {
@@ -42,10 +39,25 @@ function cloneSelection(): string {
   return container.innerHTML;
 }
 
+function isVisuallyHidden(element: Element): boolean {
+  const style = (element as HTMLElement).style;
+
+  return (
+    style.display.toLowerCase() === 'none' ||
+    ['hidden', 'collapse'].includes(style.visibility.toLowerCase())
+  );
+}
+
 export function extractFallbackContent(): string {
   const clone = document.body.cloneNode(true) as HTMLElement;
 
-  clone.querySelectorAll(REMOVED_ELEMENTS).forEach((element) => element.remove());
+  clone.querySelectorAll(REMOVED_ELEMENTS).forEach((element) => {
+    if (element.matches('[style]') && !isVisuallyHidden(element)) {
+      return;
+    }
+
+    element.remove();
+  });
 
   // Prefer semantic content roots without aggressively stripping documentation navigation.
   const root = clone.querySelector('main, article, [role="main"]');
@@ -88,10 +100,10 @@ function extractPage(): string {
   }
 
   const fallback = extractFallbackContent();
-  const textLength = fallback
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim().length;
+  const fallbackText = document.createElement('div');
+
+  fallbackText.innerHTML = fallback;
+  const textLength = fallbackText.textContent?.replace(/\s+/g, ' ').trim().length ?? 0;
 
   if (textLength < MIN_ARTICLE_TEXT_LENGTH) {
     throw new Error('Could not find enough readable page content.');

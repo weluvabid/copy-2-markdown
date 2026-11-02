@@ -110,6 +110,19 @@ describe('htmlToMarkdown adversarial cases', () => {
     expect(markdown).not.toContain('alert(1)');
   });
 
+  it('rejects URLs containing embedded credentials', () => {
+    const markdown = htmlToMarkdown(
+      '<a href="https://user:secret@example.com/private">Private link</a><img src="https://user:secret@example.com/image.png" alt="Private image">',
+      baseUrl,
+    );
+    const nodes = parseMarkdownAst(markdown);
+
+    expect(nodesOfType(nodes, 'link')).toHaveLength(0);
+    expect(nodesOfType(nodes, 'image')).toHaveLength(0);
+    expect(markdown).toContain('Private link');
+    expect(markdown).not.toContain('secret');
+  });
+
   it('preserves code language, indentation and internal blank lines', () => {
     const source =
       'function example() {\n    if (true) {\n        return 1;\n    }\n\n    return 0;\n}';

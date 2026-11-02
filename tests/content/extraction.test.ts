@@ -55,6 +55,41 @@ describe('extractContent', () => {
     expect(html).not.toContain('Interactive control');
   });
 
+  it('removes elements hidden by parsed inline styles without dropping visible styled content', () => {
+    document.body.innerHTML = `
+      <main>
+        <p style="display : none !important">Hidden display content.</p>
+        <p style="visibility: hidden">Hidden visibility content.</p>
+        <p style="color: red">Visible styled documentation content.</p>
+        <p aria-hidden="true">Accessibility-hidden content.</p>
+        <p inert>Inert content.</p>
+        <p>${articleText}</p>
+      </main>
+    `;
+
+    const html = extractFallbackContent();
+
+    expect(html).not.toContain('Hidden display content');
+    expect(html).not.toContain('Hidden visibility content');
+    expect(html).not.toContain('Accessibility-hidden content');
+    expect(html).not.toContain('Inert content');
+    expect(html).toContain('Visible styled documentation content');
+    expect(html).toContain(articleText);
+  });
+
+  it('counts fallback content from parsed text rather than stripping tags with a regex', () => {
+    document.body.innerHTML = `
+      <main>
+        <p>${articleText}</p>
+        <p>Comparison: 5 &lt; 8 and 9 &gt; 4.</p>
+      </main>
+    `;
+
+    const html = extractContent('page');
+
+    expect(html).toContain('Comparison: 5 &lt; 8 and 9 &gt; 4.');
+  });
+
   it('removes executable page scripts but preserves script examples inside documentation code blocks', () => {
     document.body.innerHTML = readFileSync(
       resolve(import.meta.dirname, '../fixtures/iris-docs.html'),

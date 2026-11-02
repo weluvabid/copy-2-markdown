@@ -16,7 +16,11 @@ function resolveUrl(
   try {
     const resolved = new URL(value.trim(), baseUrl);
 
-    return allowedProtocols.has(resolved.protocol) ? resolved.href : null;
+    if (resolved.username || resolved.password || !allowedProtocols.has(resolved.protocol)) {
+      return null;
+    }
+
+    return resolved.href;
   } catch {
     return null;
   }
