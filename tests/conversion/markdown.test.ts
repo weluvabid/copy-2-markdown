@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { htmlToMarkdown } from '../../src/conversion/markdown';
+import { nodesOfType, parseMarkdownAst } from '../helpers/markdown-ast';
 
 const baseUrl = 'https://docs.example.com/guide/start';
 
@@ -142,5 +143,90 @@ describe('htmlToMarkdown', () => {
     expect(htmlToMarkdown('<p>unfinished <strong>markup', baseUrl)).toContain(
       'unfinished **markup**',
     );
+  });
+
+  describe('independent Markdown AST validation', () => {
+    it('produces semantic GFM nodes for tables, task lists, links, images and strikethrough', () => {
+      const markdown = htmlToMarkdown(
+        `<h2>Release</h2>
+         <ul><li><input type="checkbox" checked> shipped</li><li><input type="checkbox"> pending</li></ul>
+         <table><thead><tr><th>Feature</th><th>Status</th></tr></thead><tbody><tr><td><a href="/docs">Docs</a></td><td><del>old</del></td></tr></tbody></table>
+         <p><img src="/diagram.svg" alt="Architecture"></p>`,
+        baseUrl,
+      );
+      const nodes = parseMarkdownAst(markdown);
+
+      expect(nodesOfType(nodes, 'heading')).toHaveLength(1);
+      expect(nodesOfType(nodes, 'list')).not.toHaveLength(0);
+      expect(nodesOfType(nodes, 'table')).toHaveLength(1);
+      expect(nodesOfType(nodes, 'link')).toHaveLength(1);
+      expect(nodesOfType(nodes, 'image')).toHaveLength(1);
+      expect(nodesOfType(nodes, 'delete')).toHaveLength(1);
+      expect(nodesOfType(nodes, 'listItem').some((node) => node.checked === true)).toBe(true);
+      expect(nodesOfType(nodes, 'listItem').some((node) => node.checked === false)).toBe(true);
+    });
+
+    it('preserves deeply nested mixed lists as nested AST lists', () => {
+      const markdown = htmlToMarkdown(
+        '<ul><li>Level one<ol><li>Level two<ul><li>Level three</li></ul></li></ol></li></ul>',
+        baseUrl,
+      );
+      const nodes = parseMarkdownAst(markdown);
+
+      expect(nodesOfType(nodes, 'list')).toHaveLength(3);
+      expect(nodesOfType(nodes, 'listItem')).toHaveLength(3);
+    });
+
+    it('preserves fenced code language and literal script content in code AST nodes', () => {
+      const markdown = htmlToMarkdown(
+        '<pre><code class="highlight-source-svelte">&lt;script lang="ts"&gt;\nconst x = 1;\n&lt;/script&gt;</code></pre>',
+        baseUrl,
+      );
+      const code = nodesOfType(parseMarkdownAst(markdown), 'code');
+
+      expect(code).toHaveLength(1);
+      expect(code[0]?.lang).toBe('svelte');
+      expect(code[0]?.['value']).toContain('<script lang="ts">');
+      expect(code[0]?.['value']).toContain('</script>');
+    });
+
+    it('keeps code containing fence delimiters parseable and intact', () => {
+      const source = 'const sample = ```;\nconst tilde = ~~~~;';
+      const markdown = htmlToMarkdown(
+        `<pre><code class="language-js">${source}</code></pre>`,
+        baseUrl,
+      );
+      const code = nodesOfType(parseMarkdownAst(markdown), 'code');
+
+      expect(code).toHaveLength(1);
+      expect(code[0]?.lang).toBe('js');
+      expect(code[0]?.['value']).toBe(source);
+    });
+
+    it('does not emit raw HTML for supported semantic elements or unsafe URL targets', () => {
+      const markdown = htmlToMarkdown(
+        '<p><strong>safe</strong> <a href="javascript:alert(1)">label</a></p><img src="data:image/svg+xml,evil" alt="bad">',
+        baseUrl,
+      );
+      const nodes = parseMarkdownAst(markdown);
+
+      expect(nodesOfType(nodes, 'html')).toHaveLength(0);
+      expect(nodesOfType(nodes, 'link')).toHaveLength(0);
+      expect(nodesOfType(nodes, 'image')).toHaveLength(0);
+      expect(nodesOfType(nodes, 'strong')).toHaveLength(1);
+      expect(markdown).toContain('label');
+    });
+
+    it('preserves nested blockquotes and code blocks in the parsed structure', () => {
+      const markdown = htmlToMarkdown(
+        '<blockquote><p>Outer</p><blockquote><p>Inner</p><pre><code class="language-ts">const x = 1;</code></pre></blockquote></blockquote>',
+        baseUrl,
+      );
+      const nodes = parseMarkdownAst(markdown);
+
+      expect(nodesOfType(nodes, 'blockquote')).toHaveLength(2);
+      expect(nodesOfType(nodes, 'code')).toHaveLength(1);
+      expect(nodesOfType(nodes, 'code')[0]?.lang).toBe('ts');
+    });
   });
 });
