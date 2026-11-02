@@ -1,0 +1,27 @@
+import { resolve } from 'node:path';
+import { defineConfig } from 'vite';
+
+const projectRoot = import.meta.dirname;
+
+export default defineConfig({
+  base: './',
+  root: resolve(projectRoot, 'src'),
+  publicDir: resolve(projectRoot, 'public'),
+  build: {
+    outDir: resolve(projectRoot, 'dist'),
+    emptyOutDir: true,
+    sourcemap: false,
+    minify: true,
+    target: 'es2022',
+    rollupOptions: {
+      input: {
+        popup: resolve(projectRoot, 'src/popup/index.html'),
+      },
+      output: {
+        entryFileNames: '[name].js',
+        chunkFileNames: 'chunks/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
+      },
+    },
+  },
+});
