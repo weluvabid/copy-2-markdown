@@ -23,6 +23,27 @@
           <span class="action-label" data-copy="actions.copyLink"></span>
         </button>
       </section>
+      <aside class="shortcut-card" aria-label="Keyboard shortcuts">
+        <span class="shortcut-info-icon" id="shortcut-info-icon" aria-hidden="true"></span>
+        <div class="shortcut-content">
+          <h2 data-copy="notifications.shortcutsTitle"></h2>
+          <ul class="shortcut-list">
+            <li>
+              <kbd data-shortcut="copy-page-markdown">—</kbd
+              ><span data-copy="actions.copyPage"></span>
+            </li>
+            <li>
+              <kbd data-shortcut="copy-selection-markdown">—</kbd
+              ><span data-copy="actions.copySelection"></span>
+            </li>
+            <li>
+              <kbd data-shortcut="copy-link-markdown">—</kbd
+              ><span data-copy="actions.copyLink"></span>
+            </li>
+          </ul>
+          <p data-copy="notifications.markdownExplanation"></p>
+        </div>
+      </aside>
       <div class="status-slot">
         <p
           id="status"
@@ -35,6 +56,10 @@
           <span class="status-icon" id="status-icon" aria-hidden="true"></span>
           <span class="status-label" data-copy="states.unavailable"></span>
         </p>
+      </div>
+      <div id="popup-toast" class="popup-toast" role="status" aria-live="polite" hidden>
+        <span class="popup-toast-icon" aria-hidden="true"></span>
+        <span class="popup-toast-message"></span>
       </div>
       <footer class="footer">
         <a

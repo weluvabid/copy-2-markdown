@@ -169,7 +169,7 @@ export function extractContent(mode: ExtractionMode, selectionText?: string): st
   const html = mode === 'selection' ? cloneSelection(selectionText) : extractPage();
 
   if (html.length > MAX_EXTRACTED_HTML_LENGTH) {
-    throw new Error('This page is too large to convert safely. Try selecting a smaller section.');
+    throw new Error(copy.errors.tooLarge);
   }
 
   return html;

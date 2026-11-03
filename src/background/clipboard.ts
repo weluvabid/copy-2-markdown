@@ -69,6 +69,11 @@ function enqueueClipboardWrite(text: string): Promise<void> {
   return operation;
 }
 
+/** Write directly from the service worker without sending a message to itself. */
+export function writeClipboardFromBackground(text: string): Promise<void> {
+  return enqueueClipboardWrite(text);
+}
+
 export function installClipboardMessageHandler(): void {
   chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
     if (!isClipboardWriteRequest(message)) {

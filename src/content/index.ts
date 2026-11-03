@@ -4,6 +4,7 @@ import type {
   CopyResponse,
   ExtractRequest,
   ExtractResponse,
+  ToastRequest,
 } from '../shared/messages';
 import { executeCopyAction } from './copy-action';
 import { extractContent } from './extraction';
@@ -29,6 +30,21 @@ import { showToast } from './toast';
     );
   }
 
+  function isToastRequest(message: unknown): message is ToastRequest {
+    return (
+      typeof message === 'object' &&
+      message !== null &&
+      'type' in message &&
+      message.type === 'SHOW_TOAST' &&
+      'message' in message &&
+      typeof message.message === 'string' &&
+      'toastType' in message &&
+      (message.toastType === 'success' ||
+        message.toastType === 'error' ||
+        message.toastType === 'info')
+    );
+  }
+
   function isCopyActionRequest(message: unknown): message is CopyActionRequest {
     return (
       typeof message === 'object' &&
@@ -43,6 +59,12 @@ import { showToast } from './toast';
   }
 
   chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+    if (isToastRequest(message)) {
+      showToast(message.message, message.toastType);
+
+      return false;
+    }
+
     if (isExtractRequest(message)) {
       try {
         const response: ExtractResponse = {
@@ -70,9 +92,17 @@ import { showToast } from './toast';
         })
         .catch((error: unknown) => {
           const errorMessage = error instanceof Error ? error.message : copy.errors.copyFailed;
+          const knownMessages = Object.values(copy.errors);
+          const userMessage = knownMessages.includes(errorMessage)
+            ? errorMessage
+            : copy.errors.copyFailed;
 
-          showToast(errorMessage, 'error');
-          sendResponse({ ok: false, error: errorMessage } satisfies CopyResponse);
+          if (!knownMessages.includes(errorMessage)) {
+            console.error('Copy 2 Markdown content action failed.', error);
+          }
+
+          showToast(userMessage, 'error');
+          sendResponse({ ok: false, error: userMessage } satisfies CopyResponse);
         });
 
       return true;

@@ -39,6 +39,13 @@
         "mac": "Alt+Shift+L"
       },
       "description": "Copy selection as MD"
+    },
+    "copy-link-markdown": {
+      "suggested_key": {
+        "default": "Alt+Shift+K",
+        "mac": "Alt+Shift+K"
+      },
+      "description": "Copy link as MD"
     }
   },
   "web_accessible_resources": [

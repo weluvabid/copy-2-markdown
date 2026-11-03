@@ -23,11 +23,18 @@ export interface OffscreenClipboardRequest {
   text: string;
 }
 
+export interface ToastRequest {
+  type: 'SHOW_TOAST';
+  message: string;
+  toastType: 'success' | 'error' | 'info';
+}
+
 export type ExtensionMessage =
   | ExtractRequest
   | CopyActionRequest
   | WriteClipboardRequest
-  | OffscreenClipboardRequest;
+  | OffscreenClipboardRequest
+  | ToastRequest;
 
 export type ExtractResponse =
   | { ok: true; html: string; url: string }

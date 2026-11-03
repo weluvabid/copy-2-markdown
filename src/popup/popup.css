@@ -21,13 +21,11 @@
   --secondary-hover: #e8e7e1;
   --border: #e8e7e1;
   --ring: #737373;
-  --success: #27845e;
-  --success-background: #ecfdf3;
-  --success-border: #a6f4c5;
   --processing: #2563eb;
   --processing-background: #eff6ff;
   --processing-border: #bfdbfe;
   --danger: #b42318;
+  --success: #27845e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -41,13 +39,11 @@
     --secondary-hover: #27271f;
     --border: #27271f;
     --ring: #a3a3a3;
-    --success: #86efac;
-    --success-background: #052e1b;
-    --success-border: #166534;
     --processing: #93c5fd;
     --processing-background: #172554;
     --processing-border: #1d4ed8;
     --danger: #fda29b;
+    --success: #86efac;
   }
 }
 
@@ -182,18 +178,6 @@ body {
 .action[data-state='loading'] .action-icon svg {
   animation: spin 900ms linear infinite;
 }
-.action[data-state='success'] {
-  border-color: var(--success-border);
-  background: var(--success-background);
-  color: var(--success);
-  opacity: 1;
-}
-.action[data-state='success'] .action-icon {
-  color: var(--success);
-}
-.action[data-state='success'] .action-icon svg {
-  animation: success-pop 180ms ease-out;
-}
 
 .status-slot {
   display: flex;
@@ -237,6 +221,113 @@ body {
   stroke-width: 1.8;
 }
 
+.shortcut-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 13px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.shortcut-info-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--muted);
+}
+.shortcut-info-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.8;
+}
+.shortcut-content {
+  min-width: 0;
+  flex: 1;
+}
+.shortcut-content h2 {
+  margin: 0 0 6px;
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 400;
+}
+.shortcut-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shortcut-list li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.shortcut-list kbd {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.shortcut-content p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.popup-toast {
+  position: fixed;
+  z-index: 5;
+  right: 14px;
+  bottom: 14px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 5px 20px #0002;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.popup-toast-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--success, #27845e);
+}
+.popup-toast-icon svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 1.9;
+}
+.popup-toast-message {
+  min-width: 0;
+}
+.popup-toast[data-type='error'] {
+  border-color: #d9aaa5;
+  color: var(--danger);
+}
+.popup-toast[data-type='error'] .popup-toast-icon {
+  color: var(--danger);
+}
+.popup-toast[hidden] {
+  display: none;
+}
+
 .footer {
   display: flex;
   justify-content: flex-start;
@@ -277,16 +368,6 @@ body {
 @keyframes spin {
   to {
     transform: rotate(360deg);
-  }
-}
-@keyframes success-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.72);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
   }
 }
 

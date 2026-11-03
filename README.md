@@ -6,15 +6,16 @@ A small, local-first Chrome extension for copying webpage content as clean Markd
 
 - **Copy page** — available from the extension popup or the page context menu. It extracts the primary article with Mozilla Readability, then falls back to a cleaned semantic content root or body when the page is not article-shaped. The page title is added as an H1 only when the extracted content has no H1 already.
 - **Copy selection** — available from the selection context menu or keyboard shortcut. It converts only the selected content; no floating selection UI is injected into webpages.
-- **Copy link as MD** — available from the link context menu or the extension popup. The context menu copies the clicked link; the popup copies the current page URL as a Markdown link.
+- **Copy link as MD** — available from the context menu, keyboard shortcut, or extension popup. Right-clicking a link copies that destination; invoking the action elsewhere copies the current page URL as a Markdown link. It remains available in browser-restricted pages where Chrome exposes extension context menus.
 - Clipboard writes are handled by an extension-owned offscreen document, keeping clipboard access out of page content scripts and the popup.
 
 ## Keyboard shortcuts
 
 - `Alt+Shift+M` — copy the current page as Markdown.
 - `Alt+Shift+L` — copy the current selection as Markdown.
+- `Alt+Shift+K` — copy the current page URL as a Markdown link.
 
-Shortcuts are suggestions, not fixed bindings. Change them from `chrome://extensions/shortcuts` if they conflict with another browser or system shortcut.
+Shortcuts are suggestions, not fixed bindings. The popup reads the current assignments from Chrome and displays `Not assigned` when a command has no shortcut. Change them from `chrome://extensions/shortcuts` if they conflict with another browser or system shortcut.
 
 Conversion supports headings, paragraphs, inline formatting, links, images, nested ordered and unordered lists, task lists, fenced code blocks, blockquotes, horizontal rules, and GitHub-Flavored Markdown tables. Relative links and image URLs are resolved against the source page. Unsafe link and image protocols are omitted.
 

@@ -68,17 +68,24 @@ async function startFixtureServer(): Promise<void> {
   const server = createServer((request, response) => {
     const pathname = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
 
-    if (pathname === '/article' || pathname === '/link/(draft)' || pathname === '/fallback') {
+    if (
+      pathname === '/article' ||
+      pathname === '/link/(draft)' ||
+      pathname === '/fallback' ||
+      pathname === '/empty'
+    ) {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       const html =
-        pathname === '/article'
-          ? fixtureHtml
-          : pathname === '/fallback'
-            ? fallbackHtml
-            : fixtureHtml.replace(
-                '<title>Engineering Notes</title>',
-                '<title>Guide [draft] \\ release</title>',
-              );
+        pathname === '/empty'
+          ? '<!doctype html><html><head><title>Empty</title></head><body><main></main></body></html>'
+          : pathname === '/article'
+            ? fixtureHtml
+            : pathname === '/fallback'
+              ? fallbackHtml
+              : fixtureHtml.replace(
+                  '<title>Engineering Notes</title>',
+                  '<title>Guide [draft] \\ release</title>',
+                );
 
       response.end(html);
 
@@ -222,6 +229,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     expect(manifest.commands?.['copy-selection-markdown']?.suggested_key?.default).toBe(
       'Alt+Shift+L',
     );
+    expect(manifest.commands?.['copy-link-markdown']?.suggested_key?.default).toBe('Alt+Shift+K');
 
     const { popup, target } = await openHarnessPage();
 
@@ -233,6 +241,9 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     await expect(popup.getByRole('button', { name: /copy page as md/i })).toBeVisible();
     await expect(popup.getByRole('button', { name: /copy link as md/i })).toBeVisible();
     await expect(popup.locator('#status')).toBeHidden();
+    await expect(popup.locator('.shortcut-card')).toBeVisible();
+    await expect(popup.locator('.shortcut-list li')).toHaveCount(3);
+    await expect(popup.locator('.shortcut-content p')).toHaveText('MD = Markdown');
     await expect(popup.locator('[data-action]')).toHaveCount(2);
     await expect(popup.getByRole('button', { name: /copy selection/i })).toHaveCount(0);
 
@@ -255,7 +266,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     await target.close();
   });
 
-  test('keeps popup geometry stable across ready, loading, and success states', async () => {
+  test('keeps popup geometry stable while showing transient toast feedback', async () => {
     const { target, popup } = await openHarnessPage();
     const initial = await popup.locator('.popup').evaluate((element) => {
       const actionsElement = element.querySelector('.actions');
@@ -275,9 +286,12 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     });
 
     await popup.locator('[data-action="page"]').click();
-    await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copied');
-    await expect(popup.locator('[data-action="page"]')).toHaveAttribute('data-state', 'success');
-    await expect(popup.locator('[data-action="page"] .action-icon svg')).toBeVisible();
+    await expect(popup.locator('#popup-toast')).toHaveText('Copied to clipboard');
+    await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copy page as MD');
+    await expect(popup.locator('[data-action="page"]')).not.toHaveAttribute(
+      'data-state',
+      'success',
+    );
     const after = await popup.locator('.popup').evaluate((element) => {
       const actionsElement = element.querySelector('.actions');
       const footerElement = element.querySelector('.footer');
@@ -305,7 +319,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     const { target, popup } = await openHarnessPage();
 
     await popup.locator('[data-action="page"]').click();
-    await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copied');
+    await expect(popup.locator('#popup-toast')).toHaveText('Copied to clipboard');
     await expect(popup.locator('body')).toHaveCSS('font-family', /Atkinson Hyperlegible/);
     const fontLoaded = await popup.evaluate(async () => {
       await document.fonts.ready;
@@ -350,7 +364,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     });
 
     await popup.locator('[data-action="page"]').click();
-    await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copied');
+    await expect(popup.locator('#popup-toast')).toHaveText('Copied to clipboard');
     await expect(popup.locator('body')).toHaveCSS('font-family', /Atkinson Hyperlegible/);
 
     await popup.close();
@@ -361,7 +375,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     const { target, popup } = await openHarnessPage('/fallback');
 
     await popup.locator('[data-action="page"]').click();
-    await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copied');
+    await expect(popup.locator('#popup-toast')).toHaveText('Copied to clipboard');
     await expect(popup.locator('body')).toHaveCSS('font-family', /Atkinson Hyperlegible/);
 
     const markdown = await readClipboard(target);
@@ -406,11 +420,24 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     await target.close();
   });
 
+  test('shows a recoverable error toast and restores popup buttons after extraction failure', async () => {
+    const { target, popup } = await openHarnessPage('/empty');
+
+    await popup.locator('[data-action="page"]').click();
+    await expect(popup.locator('#popup-toast')).toHaveText('No readable page content was found.');
+    await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copy page as MD');
+    await expect(popup.locator('[data-action="page"]')).toBeEnabled();
+    await expect(popup.locator('[data-action="link"]')).toBeEnabled();
+
+    await popup.close();
+    await target.close();
+  });
+
   test('copies the active page as an escaped Markdown link', async () => {
     const { target, popup } = await openHarnessPage('/link/(draft)?version=1');
 
     await popup.locator('[data-action="link"]').click();
-    await expect(popup.locator('[data-action="link"] .action-label')).toHaveText('Copied');
+    await expect(popup.locator('#popup-toast')).toHaveText('Copied to clipboard');
 
     const markdown = await readClipboard(target);
 

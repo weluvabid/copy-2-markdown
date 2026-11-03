@@ -1,14 +1,16 @@
 {
-  "brand": { "name": "Copy 2 Markdown" },
+  "brand": {
+    "name": "Copy 2 Markdown"
+  },
   "actions": {
     "copyPage": "Copy page as MD",
     "copyLink": "Copy link as MD",
     "copySelection": "Copy selection as MD"
   },
   "states": {
-    "preparing": "Preparing…",
-    "copied": "Copied",
-    "unavailable": "Unavailable on this page."
+    "preparing": "Preparing\u2026",
+    "unavailable": "Unavailable on this page.",
+    "pageUnavailable": "Page copying is unavailable here."
   },
   "errors": {
     "emptySelection": "Select some text first.",
@@ -16,13 +18,22 @@
     "noMarkdown": "No Markdown content was produced.",
     "clipboard": "Couldn't copy to clipboard. Please try again.",
     "noLink": "No link was provided.",
-    "copyFailed": "Copy failed. Please try again."
+    "copyFailed": "Copy failed. Please try again.",
+    "unsupportedPage": "This page cannot be converted.",
+    "tabUnavailable": "The page is no longer available. Try again.",
+    "extractionFailed": "Couldn't extract page content. Try again.",
+    "tooLarge": "This page is too large to convert safely. Try selecting a smaller section."
   },
   "notifications": {
-    "copied": "Markdown copied",
-    "dismiss": "Dismiss notification"
+    "copied": "Copied to clipboard",
+    "dismiss": "Dismiss notification",
+    "shortcutsTitle": "Keyboard shortcuts",
+    "shortcutUnavailable": "Not assigned",
+    "markdownExplanation": "MD = Markdown"
   },
-  "footer": { "sourceCode": "Source code" },
+  "footer": {
+    "sourceCode": "Source code"
+  },
   "contextMenu": {
     "page": "Copy page as MD",
     "selection": "Copy selection as MD",

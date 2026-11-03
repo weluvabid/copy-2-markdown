@@ -1,6 +1,8 @@
-import { Check, FileText, Code, Info, Link, LoaderCircle, createElement } from 'lucide';
+import { FileText, Code, Info, Link, LoaderCircle, Check, X, createElement } from 'lucide';
 import copy from '../shared/copy.json';
 import { copyPopupAction, type ActivePageTab, type PopupAction } from './operations';
+
+type ToastType = 'success' | 'error';
 
 function getCopyText(path: string): string {
   const value = path.split('.').reduce<unknown>((current, key) => {
@@ -24,8 +26,10 @@ document.querySelectorAll<HTMLElement>('[data-copy]').forEach((element) => {
 
 const status = document.querySelector<HTMLElement>('#status');
 const statusSlot = document.querySelector<HTMLElement>('.status-slot');
+const toast = document.querySelector<HTMLElement>('#popup-toast');
 const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-action]'));
-const successTimers = new WeakMap<HTMLButtonElement, number>();
+const shortcutLabels = Array.from(document.querySelectorAll<HTMLElement>('[data-shortcut]'));
+let toastTimer = 0;
 let operationInFlight = false;
 let activeTab: ActivePageTab | undefined;
 
@@ -46,6 +50,7 @@ function setIcon(target: Element | null, icon: typeof FileText, size = 18): void
 setIcon(document.querySelector('#brand-icon'), FileText, 20);
 setIcon(document.querySelector('#source-icon'), Code, 15);
 setIcon(document.querySelector('#status-icon'), Info, 13);
+setIcon(document.querySelector('#shortcut-info-icon'), Info, 16);
 
 for (const button of buttons) {
   setIcon(
@@ -53,6 +58,66 @@ for (const button of buttons) {
     button.dataset['action'] === 'page' ? FileText : Link,
     20,
   );
+}
+
+function showToast(message: string, type: ToastType): void {
+  if (!toast) {
+    return;
+  }
+
+  window.clearTimeout(toastTimer);
+  const messageNode = toast.querySelector<HTMLElement>('.popup-toast-message');
+  const iconNode = toast.querySelector<HTMLElement>('.popup-toast-icon');
+
+  if (messageNode) {
+    messageNode.textContent = message;
+  }
+
+  setIcon(iconNode, type === 'error' ? X : Check, 17);
+  toast.dataset['type'] = type;
+  toast.hidden = false;
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  toastTimer = window.setTimeout(
+    () => {
+      toast.hidden = true;
+    },
+    type === 'error' ? 3200 : 1800,
+  );
+}
+
+function formatShortcut(shortcut: string): string {
+  if (!shortcut) {
+    return copy.notifications.shortcutUnavailable;
+  }
+
+  const isMac = /Mac|iPhone|iPad/.test(navigator.userAgent);
+  const replacements: Record<string, string> = isMac
+    ? { Alt: '⌥', Shift: '⇧', Ctrl: '⌃', Command: '⌘' }
+    : { Alt: 'Alt', Shift: 'Shift', Ctrl: 'Ctrl', Command: '⌘' };
+
+  return shortcut
+    .split('+')
+    .map((part) => replacements[part] ?? part.toUpperCase())
+    .join(' ');
+}
+
+async function loadShortcuts(): Promise<void> {
+  try {
+    const commands = await chrome.commands.getAll();
+    const shortcuts = new Map(commands.map((command) => [command.name, command.shortcut]));
+
+    for (const element of shortcutLabels) {
+      const command = element.dataset['shortcut'];
+
+      element.textContent = formatShortcut(command ? (shortcuts.get(command) ?? '') : '');
+    }
+  } catch (error) {
+    console.error('Copy 2 Markdown could not load keyboard shortcuts.', error);
+
+    shortcutLabels.forEach((element) => {
+      element.textContent = copy.notifications.shortcutUnavailable;
+    });
+  }
 }
 
 function showUnavailable(message = copy.states.unavailable): void {
@@ -85,13 +150,6 @@ function hideStatus(): void {
 }
 
 function restoreButton(button: HTMLButtonElement): void {
-  const timer = successTimers.get(button);
-
-  if (timer) {
-    window.clearTimeout(timer);
-  }
-
-  successTimers.delete(button);
   const icon = button.querySelector('.action-icon');
   const label = button.querySelector<HTMLElement>('.action-label');
 
@@ -105,27 +163,55 @@ function restoreButton(button: HTMLButtonElement): void {
   delete button.dataset['state'];
 }
 
-function showInlineSuccess(button: HTMLButtonElement): void {
-  const icon = button.querySelector('.action-icon');
-  const label = button.querySelector<HTMLElement>('.action-label');
+function userFacingError(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+  const knownMessages = Object.values(copy.errors);
 
-  if (!icon || !label) {
-    return;
+  return knownMessages.includes(message) ? message : copy.errors.copyFailed;
+}
+
+async function resolveActiveTab(): Promise<void> {
+  buttons.forEach((button) => {
+    button.disabled = true;
+  });
+  hideStatus();
+
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+
+    if (typeof tab?.id !== 'number' || typeof tab.url !== 'string') {
+      activeTab = undefined;
+      buttons.forEach((button) => {
+        button.disabled = true;
+        button.title = copy.states.unavailable;
+      });
+      showUnavailable();
+
+      return;
+    }
+
+    activeTab = { ...tab, id: tab.id, url: tab.url };
+    const pageSupported = isSupportedPage(tab.url);
+
+    buttons.forEach((button) => {
+      const isPageAction = button.dataset['action'] === 'page';
+
+      button.disabled = isPageAction && !pageSupported;
+      button.removeAttribute('title');
+    });
+
+    if (!pageSupported) {
+      showUnavailable(copy.states.pageUnavailable);
+    }
+  } catch (error) {
+    activeTab = undefined;
+    buttons.forEach((button) => {
+      button.disabled = true;
+      button.title = copy.states.unavailable;
+    });
+    showUnavailable();
+    console.error('Copy 2 Markdown could not resolve the active tab.', error);
   }
-
-  const previousTimer = successTimers.get(button);
-
-  if (previousTimer) {
-    window.clearTimeout(previousTimer);
-  }
-
-  setIcon(icon, Check, 20);
-  label.textContent = copy.states.copied;
-  button.dataset['state'] = 'success';
-  successTimers.set(
-    button,
-    window.setTimeout(() => restoreButton(button), 1200),
-  );
 }
 
 function isSupportedPage(url: string | undefined): url is string {
@@ -146,48 +232,12 @@ function isSupportedPage(url: string | undefined): url is string {
   }
 }
 
-async function resolveActiveTab(): Promise<void> {
-  buttons.forEach((button) => {
-    button.disabled = true;
-  });
-  hideStatus();
-
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-
-    if (typeof tab?.id !== 'number' || !isSupportedPage(tab.url)) {
-      activeTab = undefined;
-      buttons.forEach((button) => {
-        button.disabled = true;
-        button.title = copy.states.unavailable;
-      });
-      showUnavailable();
-
-      return;
-    }
-
-    activeTab = { ...tab, id: tab.id, url: tab.url };
-    buttons.forEach((button) => {
-      button.disabled = false;
-      button.removeAttribute('title');
-    });
-  } catch {
-    activeTab = undefined;
-    buttons.forEach((button) => {
-      button.disabled = true;
-      button.title = copy.states.unavailable;
-    });
-    showUnavailable();
-  }
-}
-
 async function runAction(button: HTMLButtonElement, action: PopupAction): Promise<void> {
   if (operationInFlight || !activeTab) {
     return;
   }
 
   operationInFlight = true;
-  hideStatus();
   buttons.forEach((candidate) => {
     candidate.disabled = true;
     candidate.setAttribute('aria-busy', 'true');
@@ -203,15 +253,21 @@ async function runAction(button: HTMLButtonElement, action: PopupAction): Promis
 
   try {
     await copyPopupAction(activeTab, action);
-    showInlineSuccess(button);
+    showToast(copy.notifications.copied, 'success');
   } catch (error) {
-    restoreButton(button);
-    button.title = error instanceof Error ? error.message : copy.errors.copyFailed;
-    console.error('Copy 2 Markdown popup action failed.', error);
+    showToast(userFacingError(error), 'error');
+
+    const message = error instanceof Error ? error.message : '';
+
+    if (!Object.values(copy.errors).includes(message)) {
+      console.error('Copy 2 Markdown popup action failed.', error);
+    }
   } finally {
+    restoreButton(button);
     operationInFlight = false;
     buttons.forEach((candidate) => {
-      candidate.disabled = !activeTab;
+      candidate.disabled =
+        !activeTab || (candidate.dataset['action'] === 'page' && !isSupportedPage(activeTab.url));
       candidate.setAttribute('aria-busy', 'false');
     });
   }
@@ -227,7 +283,5 @@ for (const button of buttons) {
   });
 }
 
-resolveActiveTab().catch((error: unknown) => {
-  console.error('Copy 2 Markdown could not resolve the active tab.', error);
-  showUnavailable();
-});
+void loadShortcuts();
+void resolveActiveTab();

@@ -5,17 +5,18 @@ import { extractContent } from './extraction';
 import { htmlToMarkdown } from '../conversion/markdown';
 
 function markdownLink(request: CopyActionRequest): string {
-  const href = request.linkUrl;
+  const href = request.linkUrl ?? location.href;
+  const parsedUrl = new URL(href, location.href);
 
-  if (!href) {
+  if (!['http:', 'https:', 'mailto:', 'tel:'].includes(parsedUrl.protocol)) {
     throw new Error(copy.errors.noLink);
   }
 
-  const absoluteHref = new URL(href, location.href).href;
+  const absoluteHref = parsedUrl.href;
   const anchor = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]')).find(
     (candidate) => candidate.href === absoluteHref,
   );
-  const label = (anchor?.innerText || href)
+  const label = (anchor?.innerText || (request.linkUrl ? href : document.title || href))
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/\\/g, '\\\\')
