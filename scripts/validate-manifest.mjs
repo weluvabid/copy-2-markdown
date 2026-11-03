@@ -78,6 +78,7 @@ for (const theme of ['light', 'dark']) {
     await assertFile(`icons/${theme}/icon${size}.png`, `${theme} ${size}px icon`);
   }
 
+  await assertFile(`icons/${theme}/icon-master.svg`, `${theme} SVG master icon`);
   await assertFile(`icons/${theme}/icon-master-1024.png`, `${theme} 1024px master icon`);
 }
 
