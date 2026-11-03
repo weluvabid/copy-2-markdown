@@ -47,7 +47,9 @@ chrome.runtime.onInstalled.addListener(registerContextMenus);
 chrome.runtime.onStartup.addListener(registerContextMenus);
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (typeof tab.id !== 'number') {
+  const tabId = tab?.id;
+
+  if (typeof tabId !== 'number') {
     return;
   }
 
@@ -62,7 +64,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 
   if (request) {
-    dispatchCopy(tab.id, request).catch((error: unknown) => {
+    dispatchCopy(tabId, request).catch((error: unknown) => {
       console.error('Copy 2 Markdown context-menu action failed.', error);
     });
   }

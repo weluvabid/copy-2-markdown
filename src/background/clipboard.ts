@@ -22,10 +22,15 @@ function isClipboardWriteRequest(message: unknown): message is WriteClipboardReq
 
 async function ensureOffscreenDocument(): Promise<void> {
   const offscreenUrl = chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH);
-  const contexts = await chrome.runtime.getContexts({
-    contextTypes: ['OFFSCREEN_DOCUMENT'],
+  // Keep the Promise return explicit because the installed Chrome declarations
+  // combine callback and Promise overloads in a way that can confuse inference.
+  const contextFilter = {
+    contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
     documentUrls: [offscreenUrl],
-  });
+  };
+  const contexts = await (chrome.runtime.getContexts(contextFilter) as Promise<
+    chrome.runtime.ExtensionContext[]
+  >);
 
   if (contexts.length > 0) {
     return;

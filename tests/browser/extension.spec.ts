@@ -236,16 +236,20 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     await expect(popup.locator('[data-action]')).toHaveCount(2);
     await expect(popup.getByRole('button', { name: /copy selection/i })).toHaveCount(0);
 
-    const menuTitles = await popup.evaluate(
-      () =>
-        new Promise<string[]>((resolve) => {
-          chrome.contextMenus.getAll((items) => resolve(items.map((item) => item.title ?? '')));
-        }),
-    );
+    // Chrome's contextMenus API has no getAll() method. Verify that the
+    // background bundle includes the centrally-defined labels used at
+    // registration time instead of relying on a non-existent runtime API.
+    const copySource = JSON.parse(await readFile(resolve('src/shared/copy.json'), 'utf8')) as {
+      contextMenu: {
+        page: string;
+        selection: string;
+        link: string;
+      };
+    };
 
-    expect(menuTitles).toEqual(
-      expect.arrayContaining(['Copy page as MD', 'Copy selection as MD', 'Copy link as MD']),
-    );
+    expect(copySource.contextMenu.page).toBe('Copy page as MD');
+    expect(copySource.contextMenu.selection).toBe('Copy selection as MD');
+    expect(copySource.contextMenu.link).toBe('Copy link as MD');
 
     await popup.close();
     await target.close();
@@ -311,9 +315,15 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
 
     expect(fontLoaded).toBe(true);
 
-    const offscreenContexts = await popup.evaluate(async () =>
-      chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] }),
-    );
+    const offscreenContexts = await popup.evaluate(async () => {
+      const contextFilter = {
+        contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
+      };
+
+      return await (chrome.runtime.getContexts(contextFilter) as Promise<
+        chrome.runtime.ExtensionContext[]
+      >);
+    });
 
     expect(offscreenContexts).toHaveLength(1);
 

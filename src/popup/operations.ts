@@ -14,10 +14,10 @@ async function extract(
   let response: ExtractResponse;
 
   try {
-    response = await chrome.tabs.sendMessage<ExtractResponse>(tabId, request);
+    response = await chrome.tabs.sendMessage<ExtractRequest, ExtractResponse>(tabId, request);
   } catch {
     await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
-    response = await chrome.tabs.sendMessage<ExtractResponse>(tabId, request);
+    response = await chrome.tabs.sendMessage<ExtractRequest, ExtractResponse>(tabId, request);
   }
 
   if (!response.ok) {
