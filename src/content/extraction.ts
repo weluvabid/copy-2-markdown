@@ -4,6 +4,7 @@ import { removalPolicies, visuallyHiddenUtilitySelectors } from './filtering';
 
 const MIN_ARTICLE_TEXT_LENGTH = 80;
 const MAX_EXTRACTED_HTML_LENGTH = 5_000_000;
+const REMOVAL_SELECTOR = removalPolicies.flatMap((policy) => policy.selectors).join(',');
 
 function cloneSelection(): string {
   const selection = window.getSelection();
@@ -83,10 +84,8 @@ function removeDocumentNoise(source: HTMLElement, clone: HTMLElement): void {
     }
   }
 
-  for (const policy of removalPolicies) {
-    for (const selector of policy.selectors) {
-      clone.querySelectorAll(selector).forEach((element) => element.remove());
-    }
+  if (REMOVAL_SELECTOR) {
+    clone.querySelectorAll(REMOVAL_SELECTOR).forEach((element) => element.remove());
   }
 }
 

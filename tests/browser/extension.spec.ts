@@ -338,7 +338,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     const rawTitle = 'Guide [draft] \\ release';
     const escapedTitle = rawTitle.replace(/\\/g, '\\\\').replace(/[[\]]/g, '\\$&');
 
-    expect(markdown).toBe(`[${escapedTitle}](${fixtureOrigin}/link/%28draft%29?version=1)`);
+    expect(markdown).toBe(`[${escapedTitle}](<${fixtureOrigin}/link/(draft)?version=1>)`);
 
     await popup.close();
     await target.close();

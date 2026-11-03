@@ -86,9 +86,11 @@ async function copyLink(): Promise<void> {
       .replace(/\\/g, '\\\\')
       .replace(/[[\]]/g, '\\$&');
     const parsedUrl = new URL(tab.url);
-    const url = parsedUrl.href.replace(/[()]/g, (character) => (character === '(' ? '%28' : '%29'));
+    const url = parsedUrl.href;
 
-    await navigator.clipboard.writeText(`[${title}](${url})`);
+    // Angle-bracket destinations are valid CommonMark and preserve URL
+    // characters without ad-hoc percent-encoding of parentheses.
+    await navigator.clipboard.writeText(`[${title}](<${url}>)`);
     setStatus('Markdown link copied.', 'success');
   } catch (error) {
     setStatus(error instanceof Error ? error.message : 'Copy failed. Try again.', 'error');

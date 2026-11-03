@@ -3,6 +3,15 @@ import { gfm } from 'turndown-plugin-gfm';
 
 const ALLOWED_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
 const ALLOWED_IMAGE_PROTOCOLS = new Set(['http:', 'https:']);
+const IMAGE_SOURCE_ATTRIBUTES = [
+  'src',
+  'data-src',
+  'data-lazy-src',
+  'data-original',
+  'data-original-src',
+  'data-lazy',
+  'data-lightbox-src',
+] as const;
 
 function resolveUrl(
   value: string | null,
@@ -26,53 +35,113 @@ function resolveUrl(
   }
 }
 
-function resolveImageSource(image: HTMLImageElement, baseUrl: string): string | null {
-  const candidates = [
-    image.getAttribute('src'),
-    image.getAttribute('data-src'),
-    image.getAttribute('data-lazy-src'),
-    image.getAttribute('data-original'),
-    image.getAttribute('data-original-src'),
-    image.getAttribute('data-lazy'),
-    image.getAttribute('data-lightbox-src'),
-  ];
+interface SrcsetCandidate {
+  readonly url: string;
+  readonly descriptor: number;
+  readonly kind: 'width' | 'density';
+}
 
-  for (const candidate of candidates) {
-    const resolved = resolveUrl(candidate, baseUrl, ALLOWED_IMAGE_PROTOCOLS);
+/**
+ * Parse srcset without splitting blindly on commas: data URLs contain a comma
+ * as part of their URL. The parser keeps URL tokens intact and ranks valid
+ * width/density descriptors without allocating and sorting intermediate arrays.
+ */
+function largestSrcsetCandidate(srcset: string): string | null {
+  let index = 0;
+  let best: SrcsetCandidate | null = null;
+
+  while (index < srcset.length) {
+    while (index < srcset.length && /[\s,]/.test(srcset[index] ?? '')) {
+      index += 1;
+    }
+
+    if (index >= srcset.length) {
+      break;
+    }
+
+    const urlStart = index;
+
+    while (index < srcset.length && !/\s/.test(srcset[index] ?? '')) {
+      index += 1;
+    }
+
+    let url = srcset.slice(urlStart, index);
+    let descriptorText = '';
+
+    // A trailing comma terminates a candidate with no descriptor. Commas
+    // inside a data URL remain part of the URL token.
+    const hasTrailingSeparator = url.endsWith(',');
+
+    if (hasTrailingSeparator) {
+      url = url.replace(/,+$/, '');
+    } else {
+      while (index < srcset.length && /\s/.test(srcset[index] ?? '')) {
+        index += 1;
+      }
+
+      const descriptorStart = index;
+
+      while (index < srcset.length && srcset[index] !== ',') {
+        index += 1;
+      }
+
+      descriptorText = srcset.slice(descriptorStart, index).trim();
+    }
+
+    if (index < srcset.length && srcset[index] === ',') {
+      index += 1;
+    }
+
+    if (!url) {
+      continue;
+    }
+
+    let kind: SrcsetCandidate['kind'] = 'density';
+    let descriptor = 1;
+
+    if (descriptorText) {
+      const widthMatch = descriptorText.match(/^(\d+(?:\.\d+)?)w$/);
+      const densityMatch = descriptorText.match(/^(\d+(?:\.\d+)?)x$/);
+      const match = widthMatch ?? densityMatch;
+
+      if (!match) {
+        continue;
+      }
+
+      descriptor = Number(match[1]);
+      kind = widthMatch ? 'width' : 'density';
+
+      if (!Number.isFinite(descriptor) || descriptor <= 0) {
+        continue;
+      }
+    }
+
+    if (!best || (best.kind === kind && descriptor > best.descriptor)) {
+      best = { url, descriptor, kind };
+    }
+  }
+
+  return best?.url ?? null;
+}
+
+function resolveImageSource(image: HTMLImageElement, baseUrl: string): string | null {
+  for (const attribute of IMAGE_SOURCE_ATTRIBUTES) {
+    const resolved = resolveUrl(image.getAttribute(attribute), baseUrl, ALLOWED_IMAGE_PROTOCOLS);
 
     if (resolved) {
       return resolved;
     }
   }
 
-  // srcset is a fallback only. Prefer the largest declared candidate so copied
-  // Markdown does not unnecessarily point at a low-resolution thumbnail.
   const srcset = image.getAttribute('srcset');
 
-  if (srcset) {
-    const candidatesFromSet = srcset
-      .split(',')
-      .map((candidate) => {
-        const [url, descriptor] = candidate.trim().split(/\s+/);
-
-        return {
-          url,
-          density: descriptor ? Number.parseFloat(descriptor) || 0 : 1,
-        };
-      })
-      .filter((candidate): candidate is { url: string; density: number } => Boolean(candidate.url))
-      .sort((left, right) => right.density - left.density);
-
-    for (const candidate of candidatesFromSet) {
-      const resolved = resolveUrl(candidate.url, baseUrl, ALLOWED_IMAGE_PROTOCOLS);
-
-      if (resolved) {
-        return resolved;
-      }
-    }
+  if (!srcset) {
+    return null;
   }
 
-  return null;
+  const candidate = largestSrcsetCandidate(srcset);
+
+  return resolveUrl(candidate, baseUrl, ALLOWED_IMAGE_PROTOCOLS);
 }
 
 function markdownDestination(url: string): string {
@@ -117,23 +186,21 @@ function languageFrom(element: HTMLElement): string {
 
 function escapeTablePipes(value: string): string {
   let escaped = '';
+  let consecutiveBackslashes = 0;
 
-  for (let index = 0; index < value.length; index += 1) {
-    const character = value[index];
-
+  for (const character of value) {
     if (character === '|') {
-      let precedingBackslashes = 0;
-
-      for (let cursor = index - 1; cursor >= 0 && value[cursor] === '\\'; cursor -= 1) {
-        precedingBackslashes += 1;
-      }
-
-      if (precedingBackslashes % 2 === 0) {
+      if (consecutiveBackslashes % 2 === 0) {
         escaped += '\\';
       }
+
+      escaped += character;
+      consecutiveBackslashes = 0;
+      continue;
     }
 
     escaped += character;
+    consecutiveBackslashes = character === '\\' ? consecutiveBackslashes + 1 : 0;
   }
 
   return escaped;

@@ -30,8 +30,7 @@ describe('htmlToMarkdown', () => {
   it('keeps linked images inline when nested block wrappers surround them', () => {
     const profileUrl =
       'https://prepawan.medium.com/?source=post_page---byline--9f61864ab26-----------------------------------------';
-    const avatarUrl =
-      'https://miro.medium.com/v2/resize:fill:64:64/1*4khhzj9cHBlUBQn13z5Tnw.jpeg';
+    const avatarUrl = 'https://miro.medium.com/v2/resize:fill:64:64/1*4khhzj9cHBlUBQn13z5Tnw.jpeg';
     const markdown = htmlToMarkdown(
       `<a href="${profileUrl}">
         <div class="e jz ka ed kb kc">
@@ -68,6 +67,24 @@ describe('htmlToMarkdown', () => {
     );
 
     expect(markdown).toBe('![Chart](<https://docs.example.com/large.png>)');
+  });
+
+  it('parses srcset data URLs without splitting their embedded comma', () => {
+    const markdown = htmlToMarkdown(
+      '<img src="data:image/bmp;base64,placeholder" srcset="data:image/png;base64,AAAA 1x, /large.png 2x" alt="Chart">',
+      baseUrl,
+    );
+
+    expect(markdown).toBe('![Chart](<https://docs.example.com/large.png>)');
+  });
+
+  it('ranks density descriptors independently from width descriptors', () => {
+    const markdown = htmlToMarkdown(
+      '<img src="data:image/gif;base64,placeholder" srcset="/one.png 1x, /two.png 2x" alt="Chart">',
+      baseUrl,
+    );
+
+    expect(markdown).toBe('![Chart](<https://docs.example.com/two.png>)');
   });
 
   it('preserves nested lists and task lists', () => {
