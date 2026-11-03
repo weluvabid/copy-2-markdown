@@ -73,4 +73,17 @@ for (const [size, iconPath] of Object.entries(manifest.icons ?? {})) {
   await assertFile(iconPath, `icon ${size}`);
 }
 
+for (const theme of ['light', 'dark']) {
+  for (const size of [16, 32, 48, 128, 256, 512]) {
+    await assertFile(`icons/${theme}/icon${size}.png`, `${theme} ${size}px icon`);
+  }
+
+  await assertFile(`icons/${theme}/icon-master-1024.png`, `${theme} 1024px master icon`);
+}
+
+for (const [size, iconPath] of Object.entries(manifest.action?.default_icon ?? {})) {
+  assert(['16', '32'].includes(size), `unsupported action icon size: ${size}`);
+  await assertFile(iconPath, `action icon ${size}`);
+}
+
 process.stdout.write('Manifest and extension build are valid.\n');

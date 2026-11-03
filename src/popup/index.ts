@@ -1,6 +1,6 @@
 import { FileText, Code, Info, Link, LoaderCircle, Check, X, createElement } from 'lucide';
 import copy from '../shared/copy.json';
-import { formatShortcut } from '../shared/shortcuts';
+import { getShortcutMap } from '../shared/shortcuts';
 import { getPageSupport } from '../shared/page-support';
 import { copyPopupAction, type ActivePageTab, type PopupAction } from './operations';
 
@@ -92,17 +92,16 @@ function showToast(message: string, type: ToastType): void {
 
 async function loadShortcuts(): Promise<void> {
   try {
-    const commands = await chrome.commands.getAll();
-    const shortcuts = new Map(commands.map((command) => [command.name, command.shortcut]));
+    const shortcuts = await getShortcutMap();
 
     for (const element of shortcutLabels) {
-      const command = element.dataset['shortcut'];
+      const action = element.dataset['shortcut'];
+      const shortcut =
+        action === 'page' || action === 'selection' || action === 'link'
+          ? shortcuts[action]
+          : undefined;
 
-      const shortcut = command ? shortcuts.get(command) : undefined;
-
-      element.textContent = shortcut
-        ? formatShortcut(shortcut)
-        : copy.notifications.shortcutUnavailable;
+      element.textContent = shortcut ?? copy.notifications.shortcutUnavailable;
     }
   } catch (error) {
     console.error('Copy 2 Markdown could not load keyboard shortcuts.', error);
@@ -112,6 +111,24 @@ async function loadShortcuts(): Promise<void> {
     });
   }
 }
+
+async function syncActionIconTheme(isDark: boolean): Promise<void> {
+  await chrome.runtime.sendMessage({
+    type: 'SET_ACTION_ICON_THEME',
+    theme: isDark ? 'dark' : 'light',
+  });
+}
+
+const colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
+
+syncActionIconTheme(colorScheme.matches).catch((error: unknown) => {
+  console.error('Copy 2 Markdown could not initialise the toolbar icon theme.', error);
+});
+colorScheme.addEventListener('change', (event) => {
+  syncActionIconTheme(event.matches).catch((error: unknown) => {
+    console.error('Copy 2 Markdown could not update the toolbar icon theme.', error);
+  });
+});
 
 function showUnavailable(message = copy.states.unavailable): void {
   if (!status) {

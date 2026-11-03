@@ -23,6 +23,11 @@ export interface OffscreenClipboardRequest {
   text: string;
 }
 
+export interface SetActionIconThemeRequest {
+  type: 'SET_ACTION_ICON_THEME';
+  theme: 'light' | 'dark';
+}
+
 export interface ToastRequest {
   type: 'SHOW_TOAST';
   message: string;
@@ -34,6 +39,7 @@ export type ExtensionMessage =
   | CopyActionRequest
   | WriteClipboardRequest
   | OffscreenClipboardRequest
+  | SetActionIconThemeRequest
   | ToastRequest;
 
 export type ExtractResponse =

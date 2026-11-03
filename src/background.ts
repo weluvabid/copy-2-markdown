@@ -1,6 +1,6 @@
 import copy from './shared/copy.json';
 import type { CopyActionRequest, CopyAction } from './shared/messages';
-import { formatShortcut } from './shared/shortcuts';
+import { COMMANDS, getShortcutMap } from './shared/shortcuts';
 import { getPageSupport, isCopyablePageLink, isCopyableTargetLink } from './shared/page-support';
 import {
   installClipboardMessageHandler,
@@ -15,21 +15,14 @@ const MENU_IDS = {
   targetLink: 'copy-2-markdown-target-link',
 } as const;
 
-const COMMAND_IDS: Record<CopyAction, string> = {
-  page: 'copy-page-markdown',
-  selection: 'copy-selection-markdown',
-  link: 'copy-link-markdown',
-};
-
 async function getContextMenuTitles(): Promise<Record<CopyAction, string>> {
   try {
-    const commands = await chrome.commands.getAll();
-    const shortcuts = new Map(commands.map((command) => [command.name, command.shortcut ?? '']));
+    const shortcuts = await getShortcutMap();
 
     const title = (action: CopyAction, label: string): string => {
-      const shortcut = shortcuts.get(COMMAND_IDS[action]);
+      const shortcut = shortcuts[action];
 
-      return shortcut ? `${label} (${formatShortcut(shortcut)})` : label;
+      return shortcut ? `${label} (${shortcut})` : label;
     };
 
     return {
@@ -191,6 +184,48 @@ async function dispatchCopy(
   }
 }
 
+const ACTION_ICON_PATHS = {
+  light: {
+    16: 'icons/light/icon16.png',
+    32: 'icons/light/icon32.png',
+  },
+  dark: {
+    16: 'icons/dark/icon16.png',
+    32: 'icons/dark/icon32.png',
+  },
+} as const;
+
+chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
+  if (
+    typeof message !== 'object' ||
+    message === null ||
+    !('type' in message) ||
+    message.type !== 'SET_ACTION_ICON_THEME' ||
+    !('theme' in message) ||
+    (message.theme !== 'light' && message.theme !== 'dark')
+  ) {
+    return false;
+  }
+
+  if (sender.id !== chrome.runtime.id) {
+    sendResponse({ ok: false });
+
+    return false;
+  }
+
+  const theme = message.theme;
+
+  chrome.action
+    .setIcon({ path: ACTION_ICON_PATHS[theme] })
+    .then(() => sendResponse({ ok: true }))
+    .catch((error: unknown) => {
+      console.error('Copy 2 Markdown could not set the toolbar icon.', error);
+      sendResponse({ ok: false });
+    });
+
+  return true;
+});
+
 installClipboardMessageHandler();
 
 chrome.runtime.onInstalled.addListener(registerContextMenus);
@@ -255,7 +290,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 chrome.commands.onCommand.addListener((command, tab) => {
-  if (!Object.values(COMMAND_IDS).includes(command)) {
+  const commandIds: readonly string[] = Object.values(COMMANDS);
+
+  if (!commandIds.includes(command)) {
     return;
   }
 
@@ -271,7 +308,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
         throw new Error(copy.errors.tabUnavailable);
       }
 
-      if (command === COMMAND_IDS.link) {
+      if (command === COMMANDS.link) {
         await copyLinkInBackground(activeTab);
 
         return;
@@ -281,7 +318,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
         activeTab.id,
         {
           type: 'COPY_ACTION',
-          action: command === COMMAND_IDS.selection ? 'selection' : 'page',
+          action: command === COMMANDS.selection ? 'selection' : 'page',
         },
         activeTab.url,
       );

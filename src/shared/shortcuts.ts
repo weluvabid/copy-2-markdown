@@ -7,10 +7,19 @@ export const COMMANDS = {
 export type CopyCommand = keyof typeof COMMANDS;
 export type ShortcutMap = Partial<Record<CopyCommand, string>>;
 
-export function formatShortcut(
-  shortcut: string,
-  platform = navigator.platform || navigator.userAgent,
-): string {
+function getPlatform(): string {
+  const userAgentData = Reflect.get(navigator, 'userAgentData') as
+    | { platform?: unknown }
+    | undefined;
+
+  if (typeof userAgentData?.platform === 'string') {
+    return userAgentData.platform;
+  }
+
+  return navigator.platform || navigator.userAgent;
+}
+
+export function formatShortcut(shortcut: string, platform = getPlatform()): string {
   const parts = shortcut.split('+').map((part) => part.trim());
 
   if (!platform.toLowerCase().includes('mac')) {
@@ -35,7 +44,8 @@ export async function getShortcutMap(): Promise<ShortcutMap> {
   const commands = await chrome.commands.getAll();
   const shortcuts: ShortcutMap = {};
 
-  for (const [action, commandName] of Object.entries(COMMANDS) as [CopyCommand, string][]) {
+  for (const action of Object.keys(COMMANDS) as CopyCommand[]) {
+    const commandName = COMMANDS[action];
     const command = commands.find((candidate) => candidate.name === commandName);
 
     if (command?.shortcut) {
