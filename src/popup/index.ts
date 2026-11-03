@@ -30,6 +30,7 @@ document.querySelectorAll<HTMLElement>('[data-copy]').forEach((element) => {
 
 const status = document.querySelector<HTMLElement>('#status');
 const statusSlot = document.querySelector<HTMLElement>('.status-slot');
+const shortcutCard = document.querySelector<HTMLElement>('.shortcut-card');
 const toast = document.querySelector<HTMLElement>('#popup-toast');
 const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-action]'));
 const shortcutLabels = Array.from(document.querySelectorAll<HTMLElement>('[data-shortcut]'));
@@ -52,7 +53,6 @@ function setIcon(target: Element | null, icon: typeof FileText, size = 18): void
   );
 }
 
-setIcon(document.querySelector('#brand-icon'), FileText, 20);
 setIcon(document.querySelector('#source-icon'), Code, 15);
 setIcon(document.querySelector('#status-icon'), Info, 13);
 setIcon(document.querySelector('#shortcut-info-icon'), Info, 16);
@@ -148,6 +148,11 @@ function showUnavailable(message = copy.states.unavailable): void {
 
   status.hidden = false;
   status.dataset['state'] = 'unavailable';
+
+  if (shortcutCard) {
+    shortcutCard.hidden = true;
+  }
+
   statusSlot?.classList.add('is-visible');
 }
 
@@ -216,6 +221,10 @@ async function resolveActiveTab(): Promise<void> {
 
     pageActionAvailable = pageSupport === 'supported';
     const pageSupported = pageActionAvailable;
+
+    if (shortcutCard) {
+      shortcutCard.hidden = !pageSupported;
+    }
 
     buttons.forEach((button) => {
       const isPageAction = button.dataset['action'] === 'page';

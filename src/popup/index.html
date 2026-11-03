@@ -8,10 +8,12 @@
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body class="popup-document">
-    <main class="popup" aria-labelledby="title">
-      <header class="header">
-        <span class="brand-mark" aria-hidden="true" id="brand-icon"></span>
-        <h1 id="title" data-copy="brand.name"></h1>
+    <main class="popup">
+      <header class="header" aria-label="Copy 2 Markdown">
+        <picture class="brand-mark">
+          <source srcset="../icons/dark/icon-master.svg" media="(prefers-color-scheme: dark)" />
+          <img src="../icons/light/icon-master.svg" alt="" width="42" height="42" />
+        </picture>
       </header>
       <section class="actions" aria-label="Copy actions">
         <button class="action" type="button" data-action="page" disabled>
@@ -23,7 +25,7 @@
           <span class="action-label" data-copy="actions.copyLink"></span>
         </button>
       </section>
-      <aside class="shortcut-card" aria-label="Keyboard shortcuts">
+      <aside class="shortcut-card" aria-label="Keyboard shortcuts" hidden>
         <span class="shortcut-info-icon" id="shortcut-info-icon" aria-hidden="true"></span>
         <div class="shortcut-content">
           <h2 data-copy="notifications.shortcutsTitle"></h2>
@@ -55,6 +57,7 @@
         <span class="popup-toast-message"></span>
       </div>
       <footer class="footer">
+        <span class="footer-brand" data-copy="brand.name"></span>
         <a
           href="https://github.com/weluvabid/copy-2-markdown"
           target="_blank"
