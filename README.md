@@ -49,7 +49,22 @@ pnpm test:browser
 
 The browser harness creates a temporary copy of `dist/` and adds a host permission restricted to its ephemeral `127.0.0.1` fixture origin. The production manifest and build output are never modified. Browser tests require the Chromium binary installed by Playwright.
 
-Git hooks run the fast quality checks before commits and the production build plus Chromium acceptance suite before pushes. CI is intentionally disabled; the local hooks are the project's enforcement gate.
+Git hooks run the fast quality checks before commits and the production build plus Chromium acceptance suite before pushes. GitHub Actions also runs the quality checks for pushes and pull requests to `main`.
+
+## Distribution
+
+The extension can be prepared for both Chrome Web Store submission and manual installation from GitHub Releases. Both channels use the same validated production build.
+
+```sh
+pnpm package:release
+pnpm package:check
+```
+
+`package:release` builds the extension, creates `release/copy-2-markdown-vX.Y.Z.zip` with `manifest.json` at the archive root, and writes a SHA-256 checksum to `release/SHA256SUMS.txt`. Packaging requires the standard `zip` and `unzip` command-line utilities. `package:check` verifies the archive structure, required files, ZIP integrity, and checksum.
+
+To publish a GitHub Release, push a version tag matching `package.json` (for example, `v1.0.0`). The release workflow checks that the tag matches the package and manifest versions, runs the quality and Chromium browser suites, packages the production build, validates the artifacts, and attaches the ZIP and checksum to the GitHub Release. It does not publish to the Chrome Web Store.
+
+For manual installation, see [INSTALL.md](INSTALL.md).
 
 ## Permissions
 

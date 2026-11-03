@@ -22,7 +22,9 @@
     "precommit": "pnpm lint && pnpm format:check && pnpm check:types && pnpm test",
     "prepare": "sh ./scripts/install-hooks.sh",
     "test:browser": "playwright test",
-    "prepush": "pnpm build && pnpm test:browser"
+    "prepush": "pnpm build && pnpm test:browser",
+    "package:release": "pnpm build && node scripts/package.mjs",
+    "package:check": "node scripts/validate-package.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.0",

@@ -32,3 +32,6 @@ out/
 # Playwright output
 test-results/
 playwright-report/
+
+# Generated release artifacts
+release/
