@@ -47,7 +47,7 @@ await assertFile('content.js', 'injected content script');
 await assertFile('assets/fonts/LICENSE.txt', 'Atkinson Hyperlegible font licence');
 await assertFile('offscreen.html', 'clipboard offscreen document');
 
-for (const command of ['copy-page-markdown', 'copy-selection-markdown']) {
+for (const command of ['copy-page-markdown', 'copy-selection-markdown', 'copy-link-markdown']) {
   assert(
     Boolean(manifest.commands?.[command]?.suggested_key?.default),
     `shortcut is missing: ${command}`,

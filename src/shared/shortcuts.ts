@@ -7,7 +7,10 @@ export const COMMANDS = {
 export type CopyCommand = keyof typeof COMMANDS;
 export type ShortcutMap = Partial<Record<CopyCommand, string>>;
 
-export function formatShortcut(shortcut: string, platform = navigator.platform): string {
+export function formatShortcut(
+  shortcut: string,
+  platform = navigator.platform || navigator.userAgent,
+): string {
   const parts = shortcut.split('+').map((part) => part.trim());
 
   if (!platform.toLowerCase().includes('mac')) {
@@ -20,6 +23,7 @@ export function formatShortcut(shortcut: string, platform = navigator.platform):
     shift: '⇧',
     ctrl: '⌃',
     control: '⌃',
+    macctrl: '⌃',
     command: '⌘',
     cmd: '⌘',
   };

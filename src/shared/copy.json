@@ -10,14 +10,15 @@
   "states": {
     "preparing": "Preparing\u2026",
     "unavailable": "Unavailable on this page.",
-    "pageUnavailable": "Page copying is unavailable here."
+    "pageUnavailable": "Page copying is unavailable here.",
+    "fileAccessRequired": "Allow access to file URLs in extension settings to copy local files."
   },
   "errors": {
     "emptySelection": "Select some text first.",
     "noContent": "No readable page content was found.",
     "noMarkdown": "No Markdown content was produced.",
     "clipboard": "Couldn't copy to clipboard. Please try again.",
-    "noLink": "No link was provided.",
+    "noLink": "This page or link cannot be copied as a Markdown link.",
     "copyFailed": "Copy failed. Please try again.",
     "unsupportedPage": "This page cannot be converted.",
     "tabUnavailable": "The page is no longer available. Try again.",

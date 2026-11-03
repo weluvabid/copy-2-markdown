@@ -1,5 +1,7 @@
 import copy from './shared/copy.json';
 import type { CopyActionRequest, CopyAction } from './shared/messages';
+import { formatShortcut } from './shared/shortcuts';
+import { getPageSupport, isCopyablePageLink, isCopyableTargetLink } from './shared/page-support';
 import {
   installClipboardMessageHandler,
   writeClipboardFromBackground,
@@ -9,7 +11,8 @@ import { reportOperationFailure, showActionBadge, showTabToast } from './backgro
 const MENU_IDS = {
   page: 'copy-2-markdown-page',
   selection: 'copy-2-markdown-selection',
-  link: 'copy-2-markdown-link',
+  pageLink: 'copy-2-markdown-page-link',
+  targetLink: 'copy-2-markdown-target-link',
 } as const;
 
 const COMMAND_IDS: Record<CopyAction, string> = {
@@ -17,24 +20,6 @@ const COMMAND_IDS: Record<CopyAction, string> = {
   selection: 'copy-selection-markdown',
   link: 'copy-link-markdown',
 };
-
-function formatShortcut(shortcut: string): string {
-  if (!/Mac|iPhone|iPad/.test(navigator.userAgent)) {
-    return shortcut;
-  }
-
-  const macKeys: Record<string, string> = {
-    Alt: '⌥',
-    Shift: '⇧',
-    Ctrl: '⌃',
-    Command: '⌘',
-  };
-
-  return shortcut
-    .split('+')
-    .map((part) => macKeys[part] ?? part.toUpperCase())
-    .join(' ');
-}
 
 async function getContextMenuTitles(): Promise<Record<CopyAction, string>> {
   try {
@@ -76,18 +61,24 @@ function registerContextMenus(): void {
             id: MENU_IDS.page,
             title: titles.page,
             contexts: ['page', 'link', 'selection'],
-            documentUrlPatterns: ['http://*/*', 'https://*/*'],
+            documentUrlPatterns: ['http://*/*', 'https://*/*', 'file:///*'],
           },
           {
             id: MENU_IDS.selection,
             title: titles.selection,
             contexts: ['selection'],
-            documentUrlPatterns: ['http://*/*', 'https://*/*'],
+            documentUrlPatterns: ['http://*/*', 'https://*/*', 'file:///*'],
           },
           {
-            id: MENU_IDS.link,
+            id: MENU_IDS.pageLink,
             title: titles.link,
-            contexts: ['all'],
+            contexts: ['page'],
+            documentUrlPatterns: ['http://*/*', 'https://*/*', 'file:///*'],
+          },
+          {
+            id: MENU_IDS.targetLink,
+            title: titles.link,
+            contexts: ['link'],
           },
         ] satisfies chrome.contextMenus.CreateProperties[];
 
@@ -119,8 +110,11 @@ function createMarkdownLink(tab: chrome.tabs.Tab, linkUrl?: string): string {
   }
 
   const parsedUrl = new URL(rawUrl, tab.url);
+  const validLink = linkUrl
+    ? isCopyableTargetLink(parsedUrl.href)
+    : isCopyablePageLink(parsedUrl.href);
 
-  if (linkUrl && !['http:', 'https:', 'mailto:', 'tel:'].includes(parsedUrl.protocol)) {
+  if (!validLink) {
     throw new Error(copy.errors.noLink);
   }
 
@@ -153,8 +147,23 @@ async function copyLinkInBackground(tab: chrome.tabs.Tab, linkUrl?: string): Pro
   }
 }
 
-async function dispatchCopy(tabId: number, request: CopyActionRequest): Promise<void> {
+async function dispatchCopy(
+  tabId: number,
+  request: CopyActionRequest,
+  tabUrl?: string,
+): Promise<void> {
   try {
+    const fileAccessAllowed =
+      tabUrl?.startsWith('file:') === true
+        ? await chrome.extension.isAllowedFileSchemeAccess()
+        : false;
+
+    if (getPageSupport(tabUrl, fileAccessAllowed) !== 'supported') {
+      throw new Error(
+        tabUrl?.startsWith('file:') ? copy.states.fileAccessRequired : copy.errors.unsupportedPage,
+      );
+    }
+
     let response: { ok: boolean; error?: string } | undefined;
 
     try {
@@ -200,9 +209,27 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     return;
   }
 
-  if (info.menuItemId === MENU_IDS.link) {
+  if (info.menuItemId === MENU_IDS.pageLink) {
+    copyLinkInBackground(tab).catch((error: unknown) => {
+      console.error('Copy 2 Markdown page-link action failed unexpectedly.', error);
+    });
+
+    return;
+  }
+
+  if (info.menuItemId === MENU_IDS.targetLink) {
+    if (!info.linkUrl) {
+      reportOperationFailure(tab.id, new Error(copy.errors.noLink), 'target-link action').catch(
+        (error: unknown) => {
+          console.error('Copy 2 Markdown could not report the target-link failure.', error);
+        },
+      );
+
+      return;
+    }
+
     copyLinkInBackground(tab, info.linkUrl).catch((error: unknown) => {
-      console.error('Copy 2 Markdown link action failed unexpectedly.', error);
+      console.error('Copy 2 Markdown target-link action failed unexpectedly.', error);
     });
 
     return;
@@ -221,7 +248,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 
   if (request) {
-    dispatchCopy(tab.id, request).catch((error: unknown) => {
+    dispatchCopy(tab.id, request, tab.url).catch((error: unknown) => {
       console.error('Copy 2 Markdown context-menu action failed unexpectedly.', error);
     });
   }
@@ -250,10 +277,14 @@ chrome.commands.onCommand.addListener((command, tab) => {
         return;
       }
 
-      await dispatchCopy(activeTab.id, {
-        type: 'COPY_ACTION',
-        action: command === COMMAND_IDS.selection ? 'selection' : 'page',
-      });
+      await dispatchCopy(
+        activeTab.id,
+        {
+          type: 'COPY_ACTION',
+          action: command === COMMAND_IDS.selection ? 'selection' : 'page',
+        },
+        activeTab.url,
+      );
     } catch (error) {
       await reportOperationFailure(activeTab?.id, error, 'keyboard shortcut');
     }

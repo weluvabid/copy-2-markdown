@@ -14,7 +14,11 @@ describe('formatShortcut', () => {
     expect(formatShortcut('Alt+F1', 'MacIntel')).toBe('⌥ F1');
   });
 
-  it('uses platform-native modifier names outside macOS', () => {
+  it('uses platform-native modifier names on Windows', () => {
+    expect(formatShortcut('Alt+Shift+M', 'Win32')).toBe('Alt + Shift + M');
+  });
+
+  it('uses platform-native modifier names on Linux', () => {
     expect(formatShortcut('Alt+Shift+M', 'Linux x86_64')).toBe('Alt + Shift + M');
   });
 });

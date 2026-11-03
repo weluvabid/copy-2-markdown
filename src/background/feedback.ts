@@ -6,7 +6,7 @@ const badgeTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function userFacingError(error: unknown): string {
   const message = error instanceof Error ? error.message : '';
-  const knownMessages = Object.values(copy.errors);
+  const knownMessages = [...Object.values(copy.errors), copy.states.fileAccessRequired];
 
   return knownMessages.includes(message) ? message : copy.errors.copyFailed;
 }
