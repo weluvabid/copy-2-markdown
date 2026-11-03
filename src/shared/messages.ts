@@ -10,15 +10,35 @@ export interface CopyActionRequest {
   type: 'COPY_ACTION';
   action: CopyAction;
   linkUrl?: string;
+  selectionText?: string;
 }
 
-export type ExtensionMessage = ExtractRequest | CopyActionRequest;
+export interface WriteClipboardRequest {
+  type: 'WRITE_CLIPBOARD';
+  text: string;
+}
+
+export interface OffscreenClipboardRequest {
+  type: 'OFFSCREEN_WRITE_CLIPBOARD';
+  text: string;
+}
+
+export type ExtensionMessage =
+  | ExtractRequest
+  | CopyActionRequest
+  | WriteClipboardRequest
+  | OffscreenClipboardRequest;
 
 export type ExtractResponse =
   | { ok: true; html: string; url: string }
   | { ok: false; error: string };
 
 export interface CopyResponse {
+  ok: boolean;
+  error?: string;
+}
+
+export interface ClipboardResponse {
   ok: boolean;
   error?: string;
 }

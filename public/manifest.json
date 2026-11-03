@@ -3,7 +3,7 @@
   "name": "Copy 2 Markdown",
   "version": "1.0.0",
   "description": "Copy clean Markdown from webpages, selections, and links.",
-  "permissions": ["activeTab", "scripting", "clipboardWrite", "contextMenus"],
+  "permissions": ["activeTab", "scripting", "clipboardWrite", "contextMenus", "offscreen"],
   "background": {
     "service_worker": "background.js",
     "type": "module"
@@ -31,14 +31,14 @@
         "default": "Alt+Shift+M",
         "mac": "Alt+Shift+M"
       },
-      "description": "Copy current page as Markdown"
+      "description": "Copy page as MD"
     },
     "copy-selection-markdown": {
       "suggested_key": {
         "default": "Alt+Shift+L",
         "mac": "Alt+Shift+L"
       },
-      "description": "Copy selected content as Markdown"
+      "description": "Copy selection as MD"
     }
   },
   "web_accessible_resources": [
@@ -46,5 +46,6 @@
       "resources": ["assets/fonts/atkinson-hyperlegible-regular.otf"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "minimum_chrome_version": "116"
 }

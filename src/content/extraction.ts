@@ -1,3 +1,4 @@
+import copy from '../shared/copy.json';
 import { Readability } from '@mozilla/readability';
 import type { ExtractionMode } from '../shared/messages';
 import { removalPolicies, visuallyHiddenUtilitySelectors } from './filtering';
@@ -6,11 +7,19 @@ const MIN_ARTICLE_TEXT_LENGTH = 80;
 const MAX_EXTRACTED_HTML_LENGTH = 5_000_000;
 const REMOVAL_SELECTOR = removalPolicies.flatMap((policy) => policy.selectors).join(',');
 
-function cloneSelection(): string {
+function cloneSelection(selectionText?: string): string {
   const selection = window.getSelection();
 
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-    throw new Error('Select some page content first.');
+    if (selectionText?.trim()) {
+      const fallback = document.createElement('div');
+
+      fallback.textContent = selectionText;
+
+      return fallback.innerHTML;
+    }
+
+    throw new Error(copy.errors.emptySelection);
   }
 
   const container = document.createElement('div');
@@ -150,14 +159,14 @@ function extractPage(): string {
   const textLength = fallbackText.textContent?.replace(/\s+/g, ' ').trim().length ?? 0;
 
   if (textLength < MIN_ARTICLE_TEXT_LENGTH) {
-    throw new Error('Could not find enough readable page content.');
+    throw new Error(copy.errors.noContent);
   }
 
   return withPageTitle(fallback, document.title);
 }
 
-export function extractContent(mode: ExtractionMode): string {
-  const html = mode === 'selection' ? cloneSelection() : extractPage();
+export function extractContent(mode: ExtractionMode, selectionText?: string): string {
+  const html = mode === 'selection' ? cloneSelection(selectionText) : extractPage();
 
   if (html.length > MAX_EXTRACTED_HTML_LENGTH) {
     throw new Error('This page is too large to convert safely. Try selecting a smaller section.');

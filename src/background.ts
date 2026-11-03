@@ -1,4 +1,6 @@
+import copy from './shared/copy.json';
 import type { CopyActionRequest } from './shared/messages';
+import { installClipboardMessageHandler } from './background/clipboard';
 
 const MENU_IDS = {
   page: 'copy-2-markdown-page',
@@ -10,17 +12,17 @@ function registerContextMenus(): void {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: MENU_IDS.page,
-      title: 'Copy Markdown page',
+      title: copy.contextMenu.page,
       contexts: ['page'],
     });
     chrome.contextMenus.create({
       id: MENU_IDS.selection,
-      title: 'Copy selection as Markdown',
+      title: copy.contextMenu.selection,
       contexts: ['selection'],
     });
     chrome.contextMenus.create({
       id: MENU_IDS.link,
-      title: 'Copy Markdown link',
+      title: copy.contextMenu.link,
       contexts: ['link'],
     });
   });
@@ -39,6 +41,8 @@ async function dispatchCopy(tabId: number, request: CopyActionRequest): Promise<
   }
 }
 
+installClipboardMessageHandler();
+
 chrome.runtime.onInstalled.addListener(registerContextMenus);
 chrome.runtime.onStartup.addListener(registerContextMenus);
 
@@ -52,13 +56,15 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === MENU_IDS.page) {
     request = { type: 'COPY_ACTION', action: 'page' };
   } else if (info.menuItemId === MENU_IDS.selection) {
-    request = { type: 'COPY_ACTION', action: 'selection' };
+    request = { type: 'COPY_ACTION', action: 'selection', selectionText: info.selectionText };
   } else if (info.menuItemId === MENU_IDS.link && info.linkUrl) {
     request = { type: 'COPY_ACTION', action: 'link', linkUrl: info.linkUrl };
   }
 
   if (request) {
-    void dispatchCopy(tab.id, request);
+    dispatchCopy(tab.id, request).catch((error: unknown) => {
+      console.error('Copy 2 Markdown context-menu action failed.', error);
+    });
   }
 });
 
@@ -67,7 +73,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
     return;
   }
 
-  void (async () => {
+  async function dispatchShortcut(): Promise<void> {
     let tabId = tab?.id;
 
     if (typeof tabId !== 'number') {
@@ -84,7 +90,9 @@ chrome.commands.onCommand.addListener((command, tab) => {
       type: 'COPY_ACTION',
       action: command === 'copy-page-markdown' ? 'page' : 'selection',
     });
-  })().catch((error: unknown) => {
+  }
+
+  dispatchShortcut().catch((error: unknown) => {
     console.error('Copy 2 Markdown shortcut failed.', error);
   });
 });

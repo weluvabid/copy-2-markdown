@@ -215,7 +215,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
 
     expect(manifest.manifest_version).toBe(3);
     expect(manifest.permissions.sort()).toEqual(
-      ['activeTab', 'clipboardWrite', 'contextMenus', 'scripting'].sort(),
+      ['activeTab', 'clipboardWrite', 'contextMenus', 'offscreen', 'scripting'].sort(),
     );
     expect(manifest.host_permissions ?? []).toEqual([]);
     expect(manifest.commands?.['copy-page-markdown']?.suggested_key?.default).toBe('Alt+Shift+M');
@@ -230,8 +230,8 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
       'href',
       'https://github.com/weluvabid/copy-2-markdown',
     );
-    await expect(popup.getByRole('button', { name: /copy page as markdown/i })).toBeVisible();
-    await expect(popup.getByRole('button', { name: /copy markdown link/i })).toBeVisible();
+    await expect(popup.getByRole('button', { name: /copy page as md/i })).toBeVisible();
+    await expect(popup.getByRole('button', { name: /copy link as md/i })).toBeVisible();
     await expect(popup.locator('#status')).toBeHidden();
     await expect(popup.locator('[data-action]')).toHaveCount(2);
     await expect(popup.getByRole('button', { name: /copy selection/i })).toHaveCount(0);
@@ -244,11 +244,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     );
 
     expect(menuTitles).toEqual(
-      expect.arrayContaining([
-        'Copy page as Markdown',
-        'Copy selection as Markdown',
-        'Copy Markdown link',
-      ]),
+      expect.arrayContaining(['Copy page as MD', 'Copy selection as MD', 'Copy link as MD']),
     );
 
     await popup.close();
@@ -258,8 +254,15 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
   test('keeps popup geometry stable across ready, loading, and success states', async () => {
     const { target, popup } = await openHarnessPage();
     const initial = await popup.locator('.popup').evaluate((element) => {
-      const actions = element.querySelector('.actions')!.getBoundingClientRect();
-      const footer = element.querySelector('.footer')!.getBoundingClientRect();
+      const actionsElement = element.querySelector('.actions');
+      const footerElement = element.querySelector('.footer');
+
+      if (!actionsElement || !footerElement) {
+        throw new Error('Popup layout elements are missing.');
+      }
+
+      const actions = actionsElement.getBoundingClientRect();
+      const footer = footerElement.getBoundingClientRect();
 
       return {
         actions: { x: actions.x, y: actions.y, width: actions.width, height: actions.height },
@@ -269,9 +272,18 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
 
     await popup.locator('[data-action="page"]').click();
     await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copied');
+    await expect(popup.locator('[data-action="page"]')).toHaveAttribute('data-state', 'success');
+    await expect(popup.locator('[data-action="page"] .action-icon svg')).toBeVisible();
     const after = await popup.locator('.popup').evaluate((element) => {
-      const actions = element.querySelector('.actions')!.getBoundingClientRect();
-      const footer = element.querySelector('.footer')!.getBoundingClientRect();
+      const actionsElement = element.querySelector('.actions');
+      const footerElement = element.querySelector('.footer');
+
+      if (!actionsElement || !footerElement) {
+        throw new Error('Popup layout elements are missing.');
+      }
+
+      const actions = actionsElement.getBoundingClientRect();
+      const footer = footerElement.getBoundingClientRect();
 
       return {
         actions: { x: actions.x, y: actions.y, width: actions.width, height: actions.height },
@@ -298,6 +310,12 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     });
 
     expect(fontLoaded).toBe(true);
+
+    const offscreenContexts = await popup.evaluate(async () =>
+      chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] }),
+    );
+
+    expect(offscreenContexts).toHaveLength(1);
 
     const markdown = await readClipboard(target);
 
@@ -351,7 +369,9 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     await popup.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
 
-      if (typeof tab?.id !== 'number') {throw new Error('Could not resolve fixture tab.');}
+      if (typeof tab?.id !== 'number') {
+        throw new Error('Could not resolve fixture tab.');
+      }
 
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
     });
@@ -359,7 +379,9 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     await target.evaluate(() => {
       const paragraph = document.querySelector('main article p:not(.cdk-visually-hidden)');
 
-      if (!paragraph?.firstChild) {throw new Error('Selection fixture paragraph is missing.');}
+      if (!paragraph?.firstChild) {
+        throw new Error('Selection fixture paragraph is missing.');
+      }
 
       const range = document.createRange();
 

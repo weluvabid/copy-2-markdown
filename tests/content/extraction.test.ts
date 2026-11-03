@@ -310,9 +310,15 @@ describe('extractContent', () => {
     expect(extractContent('selection')).toContain('Explicit selection text');
   });
 
+  it('uses the context-menu selection text when the live DOM selection is unavailable', () => {
+    expect(extractContent('selection', 'Text captured by the browser context menu.')).toContain(
+      'Text captured by the browser context menu.',
+    );
+  });
+
   it('rejects an empty selection and pages without meaningful content', () => {
-    expect(() => extractContent('selection')).toThrow('Select some page content first.');
+    expect(() => extractContent('selection')).toThrow('Select some text first.');
     document.body.innerHTML = '<main><p>Too short.</p></main>';
-    expect(() => extractContent('page')).toThrow('Could not find enough readable page content.');
+    expect(() => extractContent('page')).toThrow('No readable page content was found.');
   });
 });

@@ -22,6 +22,10 @@ async function assertFile(relativePath, label) {
 }
 
 assert(manifest.manifest_version === 3, 'manifest_version must be 3');
+assert(
+  manifest.permissions?.includes('offscreen'),
+  'offscreen permission is required for clipboard writes',
+);
 assert(typeof manifest.name === 'string' && manifest.name.length > 0, 'name is required');
 assert(/^\d+\.\d+\.\d+(?:\.\d+)?$/.test(manifest.version), 'version is invalid');
 
@@ -41,6 +45,7 @@ for (const script of manifest.content_scripts ?? []) {
 
 await assertFile('content.js', 'injected content script');
 await assertFile('assets/fonts/LICENSE.txt', 'Atkinson Hyperlegible font licence');
+await assertFile('offscreen.html', 'clipboard offscreen document');
 
 for (const command of ['copy-page-markdown', 'copy-selection-markdown']) {
   assert(
@@ -51,16 +56,16 @@ for (const command of ['copy-page-markdown', 'copy-selection-markdown']) {
 
 assert(
   manifest.web_accessible_resources?.some((entry) =>
-    entry.resources?.includes('assets/fonts/*.otf'),
+    entry.resources?.includes('assets/fonts/atkinson-hyperlegible-regular.otf'),
   ),
   'bundled fonts must be web-accessible to isolated content UI',
 );
 
-const assetFiles = await readdir(resolve(distDirectory, 'assets'));
+const fontFiles = await readdir(resolve(distDirectory, 'assets/fonts'));
 
 assert(
-  assetFiles.filter((file) => file.endsWith('.otf')).length >= 2,
-  'both font weights must be included in the build',
+  fontFiles.includes('atkinson-hyperlegible-regular.otf'),
+  'the regular Atkinson Hyperlegible font must be included in the build',
 );
 
 for (const [size, iconPath] of Object.entries(manifest.icons ?? {})) {

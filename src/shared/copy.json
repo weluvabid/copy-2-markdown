@@ -1,0 +1,31 @@
+{
+  "brand": { "name": "Copy 2 Markdown" },
+  "actions": {
+    "copyPage": "Copy page as MD",
+    "copyLink": "Copy link as MD",
+    "copySelection": "Copy selection as MD"
+  },
+  "states": {
+    "preparing": "Preparing…",
+    "copied": "Copied",
+    "unavailable": "Unavailable on this page."
+  },
+  "errors": {
+    "emptySelection": "Select some text first.",
+    "noContent": "No readable page content was found.",
+    "noMarkdown": "No Markdown content was produced.",
+    "clipboard": "Couldn't copy to clipboard. Please try again.",
+    "noLink": "No link was provided.",
+    "copyFailed": "Copy failed. Please try again."
+  },
+  "notifications": {
+    "copied": "Markdown copied",
+    "dismiss": "Dismiss notification"
+  },
+  "footer": { "sourceCode": "Source code" },
+  "contextMenu": {
+    "page": "Copy page as MD",
+    "selection": "Copy selection as MD",
+    "link": "Copy link as MD"
+  }
+}

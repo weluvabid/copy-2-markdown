@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       input: {
         popup: resolve(projectRoot, 'src/popup/index.html'),
+        offscreen: resolve(projectRoot, 'src/offscreen.html'),
         background: resolve(projectRoot, 'src/background.ts'),
       },
       output: {

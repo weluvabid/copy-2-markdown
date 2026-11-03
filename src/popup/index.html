@@ -11,16 +11,16 @@
     <main class="popup" aria-labelledby="title">
       <header class="header">
         <span class="brand-mark" aria-hidden="true" id="brand-icon"></span>
-        <h1 id="title">Copy 2 Markdown</h1>
+        <h1 id="title" data-copy="brand.name"></h1>
       </header>
       <section class="actions" aria-label="Copy actions">
         <button class="action" type="button" data-action="page" disabled>
           <span class="action-icon" aria-hidden="true"></span>
-          <span class="action-label">Copy page as MD</span>
+          <span class="action-label" data-copy="actions.copyPage"></span>
         </button>
         <button class="action" type="button" data-action="link" disabled>
           <span class="action-icon" aria-hidden="true"></span>
-          <span class="action-label">Copy link as MD</span>
+          <span class="action-label" data-copy="actions.copyLink"></span>
         </button>
       </section>
       <div class="status-slot">
@@ -33,7 +33,7 @@
           hidden
         >
           <span class="status-icon" id="status-icon" aria-hidden="true"></span>
-          <span class="status-label">Unavailable on this page.</span>
+          <span class="status-label" data-copy="states.unavailable"></span>
         </p>
       </div>
       <footer class="footer">
@@ -43,7 +43,7 @@
           rel="noopener noreferrer"
         >
           <span class="footer-icon" id="source-icon" aria-hidden="true"></span>
-          <span>Source code</span>
+          <span data-copy="footer.sourceCode"></span>
         </a>
       </footer>
     </main>

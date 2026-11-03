@@ -6,7 +6,8 @@ A small, local-first Chrome extension for copying webpage content as clean Markd
 
 - **Copy page** — available from the extension popup or the page context menu. It extracts the primary article with Mozilla Readability, then falls back to a cleaned semantic content root or body when the page is not article-shaped. The page title is added as an H1 only when the extracted content has no H1 already.
 - **Copy selection** — available from the selection context menu or keyboard shortcut. It converts only the selected content; no floating selection UI is injected into webpages.
-- **Copy Markdown link** — available from the link context menu or the extension popup. The context menu copies the clicked link; the popup copies the current page URL as a Markdown link.
+- **Copy link as MD** — available from the link context menu or the extension popup. The context menu copies the clicked link; the popup copies the current page URL as a Markdown link.
+- Clipboard writes are handled by an extension-owned offscreen document, keeping clipboard access out of page content scripts and the popup.
 
 ## Keyboard shortcuts
 
