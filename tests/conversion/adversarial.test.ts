@@ -171,7 +171,7 @@ describe('htmlToMarkdown adversarial cases', () => {
     const links = nodesOfType(parseMarkdownAst(markdown), 'link');
 
     expect(links).toHaveLength(1);
-    expect(links[0]?.['url']).toBe('https://docs.example.com/guide/%28advanced%29');
+    expect(links[0]?.['url']).toBe('https://docs.example.com/guide/(advanced)');
     expect(links[0]?.['title']).toBe('A "quoted" title');
   });
 

@@ -9,8 +9,8 @@ await mkdir('dist/assets/fonts', { recursive: true });
 await cp('src/assets/fonts/LICENSE.txt', 'dist/assets/fonts/LICENSE.txt');
 
 const commands = [
-  [vite, ['build', '--watch']],
-  [vite, ['build', '--config', 'vite.content.config.ts', '--watch']],
+  [vite, ['build', '--watch', '--mode', 'development']],
+  [vite, ['build', '--config', 'vite.content.config.ts', '--watch', '--mode', 'development']],
 ];
 const children = commands.map(([executable, args]) =>
   spawn(process.execPath, [executable, ...args], { stdio: 'inherit' }),

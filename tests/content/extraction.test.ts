@@ -121,6 +121,62 @@ describe('extractContent', () => {
     }
   });
 
+  it('preserves visible article images that use clip-path for presentation', () => {
+    document.body.innerHTML = `
+      <main>
+        <figure>
+          <img
+            src="/charts/network(overview).png"
+            alt=""
+            style="clip-path: inset(50%)"
+          >
+          <figcaption>Network traffic by ASN.</figcaption>
+        </figure>
+        <p>${articleText}</p>
+      </main>
+    `;
+
+    const html = extractFallbackContent();
+
+    expect(html).toContain('network(overview).png');
+    expect(html).toContain('Network traffic by ASN.');
+  });
+
+  it('removes the complete visually-hidden utility pattern without removing visible clipped content', () => {
+    const stylesheet = document.createElement('style');
+
+    stylesheet.textContent = `
+      .sr-only {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip-path: inset(50%) !important;
+        white-space: nowrap !important;
+      }
+    `;
+    document.head.append(stylesheet);
+    document.body.innerHTML = `
+      <main>
+        <a class="sr-only">Copy link</a>
+        <img src="/charts/visible.png" style="clip-path: inset(50%)" alt="">
+        <p>${articleText}</p>
+      </main>
+    `;
+
+    try {
+      const html = extractFallbackContent();
+
+      expect(html).not.toContain('Copy link');
+      expect(html).toContain('/charts/visible.png');
+      expect(html).toContain(articleText);
+    } finally {
+      stylesheet.remove();
+    }
+  });
+
   it('removes elements hidden by stylesheet rules and hidden ancestors', () => {
     const stylesheet = document.createElement('style');
 

@@ -26,6 +26,61 @@ function resolveUrl(
   }
 }
 
+function resolveImageSource(image: HTMLImageElement, baseUrl: string): string | null {
+  const candidates = [
+    image.getAttribute('src'),
+    image.getAttribute('data-src'),
+    image.getAttribute('data-lazy-src'),
+    image.getAttribute('data-original'),
+    image.getAttribute('data-original-src'),
+    image.getAttribute('data-lazy'),
+    image.getAttribute('data-lightbox-src'),
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = resolveUrl(candidate, baseUrl, ALLOWED_IMAGE_PROTOCOLS);
+
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  // srcset is a fallback only. Prefer the largest declared candidate so copied
+  // Markdown does not unnecessarily point at a low-resolution thumbnail.
+  const srcset = image.getAttribute('srcset');
+
+  if (srcset) {
+    const candidatesFromSet = srcset
+      .split(',')
+      .map((candidate) => {
+        const [url, descriptor] = candidate.trim().split(/\s+/);
+
+        return {
+          url,
+          density: descriptor ? Number.parseFloat(descriptor) || 0 : 1,
+        };
+      })
+      .filter((candidate): candidate is { url: string; density: number } => Boolean(candidate.url))
+      .sort((left, right) => right.density - left.density);
+
+    for (const candidate of candidatesFromSet) {
+      const resolved = resolveUrl(candidate.url, baseUrl, ALLOWED_IMAGE_PROTOCOLS);
+
+      if (resolved) {
+        return resolved;
+      }
+    }
+  }
+
+  return null;
+}
+
+function markdownDestination(url: string): string {
+  // CommonMark's angle-bracket destination form safely contains parentheses
+  // and other characters that would otherwise need ad-hoc escaping.
+  return `<${url}>`;
+}
+
 function languageFrom(element: HTMLElement): string {
   const dataLanguage =
     element.getAttribute('data-language')?.trim() ?? element.getAttribute('data-lang')?.trim();
@@ -184,9 +239,7 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
         return content;
       }
 
-      const href = resolvedHref.replace(/[()]/g, (character) =>
-        character === '(' ? '%28' : '%29',
-      );
+      const href = markdownDestination(resolvedHref);
       const title = anchor.title ? ` ${formatMarkdownTitle(anchor.title)}` : '';
 
       return content.trim() ? `[${content}](${href}${title})` : '';
@@ -197,13 +250,13 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
     filter: 'img',
     replacement(_content, node) {
       const image = node as HTMLImageElement;
-      const resolvedSrc = resolveUrl(image.getAttribute('src'), baseUrl, ALLOWED_IMAGE_PROTOCOLS);
+      const resolvedSrc = resolveImageSource(image, baseUrl);
 
       if (!resolvedSrc) {
         return '';
       }
 
-      const src = resolvedSrc.replace(/[()]/g, (character) => (character === '(' ? '%28' : '%29'));
+      const src = markdownDestination(resolvedSrc);
       const alt = (image.getAttribute('alt') ?? '')
         .replace(/\\/g, '\\\\')
         .replace(/[[\]]/g, '\\$&');

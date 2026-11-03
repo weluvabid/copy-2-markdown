@@ -56,7 +56,11 @@ function isVisuallyHidden(element: Element): boolean {
     clipsOverflow &&
     (hasClipPath || hasZeroClip || (hasVisuallyHiddenUtility && style.whiteSpace === 'nowrap'));
 
-  return hasClipPath || hasZeroClip || hasClassicVisuallyHiddenPattern;
+  // Clipping alone is not evidence that an element is hidden: sites also use
+  // clip-path for visible image effects. Require the complete visually-hidden
+  // layout pattern before removing clipped content.
+
+  return hasClassicVisuallyHiddenPattern;
 }
 
 function removeDocumentNoise(source: HTMLElement, clone: HTMLElement): void {

@@ -3,15 +3,15 @@ import { defineConfig } from 'vite';
 
 const projectRoot = import.meta.dirname;
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: './',
   root: resolve(projectRoot, 'src'),
   publicDir: resolve(projectRoot, 'public'),
   build: {
     outDir: resolve(projectRoot, 'dist'),
     emptyOutDir: false,
-    sourcemap: false,
-    minify: true,
+    sourcemap: mode === 'development',
+    minify: mode !== 'development',
     target: 'es2022',
     rollupOptions: {
       input: {
@@ -24,4 +24,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

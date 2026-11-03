@@ -3,14 +3,14 @@ import { defineConfig } from 'vite';
 
 const projectRoot = import.meta.dirname;
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   root: resolve(projectRoot, 'src'),
   publicDir: false,
   build: {
     outDir: resolve(projectRoot, 'dist'),
     emptyOutDir: false,
-    sourcemap: false,
-    minify: true,
+    sourcemap: mode === 'development',
+    minify: mode !== 'development',
     target: 'es2022',
     lib: {
       entry: resolve(projectRoot, 'src/content/index.ts'),
@@ -19,4 +19,4 @@ export default defineConfig({
       fileName: () => 'content.js',
     },
   },
-});
+}));

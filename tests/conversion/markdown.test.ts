@@ -23,8 +23,26 @@ describe('htmlToMarkdown', () => {
       baseUrl,
     );
 
-    expect(markdown).toContain('[API](https://docs.example.com/api)');
-    expect(markdown).toContain('![System diagram](https://docs.example.com/guide/diagram.png)');
+    expect(markdown).toContain('[API](<https://docs.example.com/api>)');
+    expect(markdown).toContain('![System diagram](<https://docs.example.com/guide/diagram.png>)');
+  });
+
+  it('resolves lazy image source attributes and preserves empty-alt images', () => {
+    const markdown = htmlToMarkdown(
+      '<img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" data-src="/charts/network.png" alt="">',
+      baseUrl,
+    );
+
+    expect(markdown).toBe('![](<https://docs.example.com/charts/network.png>)');
+  });
+
+  it('uses the largest srcset candidate when no usable image source exists', () => {
+    const markdown = htmlToMarkdown(
+      '<img src="data:image/gif;base64,placeholder" srcset="/small.png 320w, /large.png 1280w" alt="Chart">',
+      baseUrl,
+    );
+
+    expect(markdown).toBe('![Chart](<https://docs.example.com/large.png>)');
   });
 
   it('preserves nested lists and task lists', () => {
@@ -106,7 +124,7 @@ describe('htmlToMarkdown', () => {
       baseUrl,
     );
 
-    expect(markdown).toContain('[CDN](https://cdn.example.com/docs)');
+    expect(markdown).toContain('[CDN](<https://cdn.example.com/docs>)');
     expect(markdown).toContain('Broken');
     expect(markdown).not.toContain('http://[invalid');
   });
