@@ -27,6 +27,31 @@ describe('htmlToMarkdown', () => {
     expect(markdown).toContain('![System diagram](<https://docs.example.com/guide/diagram.png>)');
   });
 
+  it('keeps linked images inline when nested block wrappers surround them', () => {
+    const profileUrl =
+      'https://prepawan.medium.com/?source=post_page---byline--9f61864ab26-----------------------------------------';
+    const avatarUrl =
+      'https://miro.medium.com/v2/resize:fill:64:64/1*4khhzj9cHBlUBQn13z5Tnw.jpeg';
+    const markdown = htmlToMarkdown(
+      `<a href="${profileUrl}">
+        <div class="e jz ka ed kb kc">
+          <div class="e dl">
+            <img alt="Pawan Kumar" src="${avatarUrl}" width="32" height="32">
+            <div class="kd ed e ee ef dq g ke eg"></div>
+          </div>
+        </div>
+      </a>`,
+      baseUrl,
+    );
+
+    expect(markdown).toBe(`[![Pawan Kumar](<${avatarUrl}>)](<${profileUrl}>)`);
+
+    const nodes = parseMarkdownAst(markdown);
+
+    expect(nodesOfType(nodes, 'link')).toHaveLength(1);
+    expect(nodesOfType(nodes, 'image')).toHaveLength(1);
+  });
+
   it('resolves lazy image source attributes and preserves empty-alt images', () => {
     const markdown = htmlToMarkdown(
       '<img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" data-src="/charts/network.png" alt="">',

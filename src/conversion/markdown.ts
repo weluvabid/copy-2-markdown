@@ -242,7 +242,13 @@ export function htmlToMarkdown(html: string, baseUrl: string): string {
       const href = markdownDestination(resolvedHref);
       const title = anchor.title ? ` ${formatMarkdownTitle(anchor.title)}` : '';
 
-      return content.trim() ? `[${content}](${href}${title})` : '';
+      // Block wrappers (commonly nested <div>s around linked avatars) can
+      // contribute leading/trailing blank lines to Turndown's child content.
+      // Links are inline Markdown constructs, so discard only that outer
+      // whitespace while preserving all meaningful content inside the label.
+      const label = content.trim();
+
+      return label ? `[${label}](${href}${title})` : '';
     },
   });
 
