@@ -128,12 +128,7 @@ async function prepareTestExtension(): Promise<string> {
   // The test-only host permission is restricted to the loopback fixture host.
   // The production dist/manifest.json remains unchanged and retains activeTab-only access.
   manifest.host_permissions = ['http://127.0.0.1/*'];
-  manifest.background = { service_worker: '__playwright_test_worker.js' };
   await writeFile(join(extensionDirectory, 'manifest.json'), JSON.stringify(manifest, null, 2));
-  await writeFile(
-    join(extensionDirectory, '__playwright_test_worker.js'),
-    'chrome.runtime.onInstalled.addListener(() => {});\n',
-  );
 
   return extensionDirectory;
 }
@@ -210,25 +205,81 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     }
   });
 
-  test('loads the packaged MV3 extension and exposes exactly three actions', async () => {
+  test('loads the packaged MV3 extension and exposes exactly two popup actions', async () => {
     const manifest = JSON.parse(await readFile(join(distDirectory, 'manifest.json'), 'utf8')) as {
       manifest_version: number;
       permissions: string[];
       host_permissions?: string[];
+      commands?: Record<string, { suggested_key?: { default?: string; mac?: string } }>;
     };
 
     expect(manifest.manifest_version).toBe(3);
     expect(manifest.permissions.sort()).toEqual(
-      ['activeTab', 'clipboardWrite', 'scripting'].sort(),
+      ['activeTab', 'clipboardWrite', 'contextMenus', 'scripting'].sort(),
     );
     expect(manifest.host_permissions ?? []).toEqual([]);
+    expect(manifest.commands?.['copy-page-markdown']?.suggested_key?.default).toBe('Alt+Shift+M');
+    expect(manifest.commands?.['copy-selection-markdown']?.suggested_key?.default).toBe(
+      'Alt+Shift+L',
+    );
 
     const { popup, target } = await openHarnessPage();
 
-    await expect(popup.locator('[data-action]')).toHaveCount(3);
-    await expect(popup.getByRole('button', { name: /copy page/i })).toBeVisible();
-    await expect(popup.getByRole('button', { name: /copy selection/i })).toBeVisible();
-    await expect(popup.getByRole('button', { name: /copy link/i })).toBeVisible();
+    await expect(popup.locator('[data-action]')).toHaveCount(2);
+    await expect(popup.locator('.footer a')).toHaveAttribute(
+      'href',
+      'https://github.com/weluvabid/copy-2-markdown',
+    );
+    await expect(popup.getByRole('button', { name: /copy page as markdown/i })).toBeVisible();
+    await expect(popup.getByRole('button', { name: /copy markdown link/i })).toBeVisible();
+    await expect(popup.locator('#status')).toBeHidden();
+    await expect(popup.locator('[data-action]')).toHaveCount(2);
+    await expect(popup.getByRole('button', { name: /copy selection/i })).toHaveCount(0);
+
+    const menuTitles = await popup.evaluate(
+      () =>
+        new Promise<string[]>((resolve) => {
+          chrome.contextMenus.getAll((items) => resolve(items.map((item) => item.title ?? '')));
+        }),
+    );
+
+    expect(menuTitles).toEqual(
+      expect.arrayContaining([
+        'Copy page as Markdown',
+        'Copy selection as Markdown',
+        'Copy Markdown link',
+      ]),
+    );
+
+    await popup.close();
+    await target.close();
+  });
+
+  test('keeps popup geometry stable across ready, loading, and success states', async () => {
+    const { target, popup } = await openHarnessPage();
+    const initial = await popup.locator('.popup').evaluate((element) => {
+      const actions = element.querySelector('.actions')!.getBoundingClientRect();
+      const footer = element.querySelector('.footer')!.getBoundingClientRect();
+
+      return {
+        actions: { x: actions.x, y: actions.y, width: actions.width, height: actions.height },
+        footerY: footer.y,
+      };
+    });
+
+    await popup.locator('[data-action="page"]').click();
+    await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copied');
+    const after = await popup.locator('.popup').evaluate((element) => {
+      const actions = element.querySelector('.actions')!.getBoundingClientRect();
+      const footer = element.querySelector('.footer')!.getBoundingClientRect();
+
+      return {
+        actions: { x: actions.x, y: actions.y, width: actions.width, height: actions.height },
+        footerY: footer.y,
+      };
+    });
+
+    expect(after).toEqual(initial);
 
     await popup.close();
     await target.close();
@@ -238,7 +289,15 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     const { target, popup } = await openHarnessPage();
 
     await popup.locator('[data-action="page"]').click();
-    await expect(popup.locator('#status')).toHaveText('Markdown copied.');
+    await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copied');
+    await expect(popup.locator('body')).toHaveCSS('font-family', /Atkinson Hyperlegible/);
+    const fontLoaded = await popup.evaluate(async () => {
+      await document.fonts.ready;
+
+      return document.fonts.check('13px "Atkinson Hyperlegible"');
+    });
+
+    expect(fontLoaded).toBe(true);
 
     const markdown = await readClipboard(target);
 
@@ -263,7 +322,8 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     });
 
     await popup.locator('[data-action="page"]').click();
-    await expect(popup.locator('#status')).toHaveText('Markdown copied.');
+    await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copied');
+    await expect(popup.locator('body')).toHaveCSS('font-family', /Atkinson Hyperlegible/);
 
     await popup.close();
     await target.close();
@@ -273,7 +333,8 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     const { target, popup } = await openHarnessPage('/fallback');
 
     await popup.locator('[data-action="page"]').click();
-    await expect(popup.locator('#status')).toHaveText('Markdown copied.');
+    await expect(popup.locator('[data-action="page"] .action-label')).toHaveText('Copied');
+    await expect(popup.locator('body')).toHaveCSS('font-family', /Atkinson Hyperlegible/);
 
     const markdown = await readClipboard(target);
 
@@ -284,45 +345,31 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     await target.close();
   });
 
-  test('copies only the explicitly selected fragment', async () => {
+  test('does not inject a floating action when text is selected', async () => {
     const { target, popup } = await openHarnessPage();
+
+    await popup.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
+
+      if (typeof tab?.id !== 'number') {throw new Error('Could not resolve fixture tab.');}
+
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+    });
 
     await target.evaluate(() => {
       const paragraph = document.querySelector('main article p:not(.cdk-visually-hidden)');
 
-      if (!paragraph?.firstChild) {
-        throw new Error('Selection fixture paragraph is missing.');
-      }
+      if (!paragraph?.firstChild) {throw new Error('Selection fixture paragraph is missing.');}
 
       const range = document.createRange();
 
       range.selectNodeContents(paragraph);
       window.getSelection()?.removeAllRanges();
       window.getSelection()?.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
     });
 
-    await popup.locator('[data-action="selection"]').click();
-    await expect(popup.locator('#status')).toHaveText('Markdown copied.');
-
-    const markdown = await readClipboard(target);
-
-    expect(markdown).toContain('reliable approach to browser automation');
-    expect(markdown).not.toContain('# Engineering Notes');
-    expect(markdown).not.toContain('## Implementation');
-
-    await popup.close();
-    await target.close();
-  });
-
-  test('reports an empty selection without writing stale clipboard content', async () => {
-    const { target, popup } = await openHarnessPage();
-
-    await target.evaluate(() => navigator.clipboard.writeText('preserve this clipboard value'));
-    await popup.locator('[data-action="selection"]').click();
-    await expect(popup.locator('#status')).toHaveText('Select some page content first.');
-    await expect(popup.locator('#status')).toHaveAttribute('data-state', 'error');
-    await expect.poll(() => readClipboard(target)).toBe('preserve this clipboard value');
-
+    await expect(target.locator('#copy-2-markdown-selection-action')).toHaveCount(0);
     await popup.close();
     await target.close();
   });
@@ -331,7 +378,7 @@ test.describe('Copy 2 Markdown MV3 browser acceptance', () => {
     const { target, popup } = await openHarnessPage('/link/(draft)?version=1');
 
     await popup.locator('[data-action="link"]').click();
-    await expect(popup.locator('#status')).toHaveText('Markdown link copied.');
+    await expect(popup.locator('[data-action="link"] .action-label')).toHaveText('Copied');
 
     const markdown = await readClipboard(target);
 

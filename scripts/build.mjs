@@ -23,5 +23,11 @@ await rm('dist', { recursive: true, force: true });
 await run(vite, ['build']);
 await run(vite, ['build', '--config', 'vite.content.config.ts']);
 await mkdir('dist/assets/fonts', { recursive: true });
-await cp('src/assets/fonts/LICENSE.txt', 'dist/assets/fonts/LICENSE.txt');
+await Promise.all([
+  cp(
+    'src/assets/fonts/atkinson-hyperlegible-regular.otf',
+    'dist/assets/fonts/atkinson-hyperlegible-regular.otf',
+  ),
+  cp('src/assets/fonts/LICENSE.txt', 'dist/assets/fonts/LICENSE.txt'),
+]);
 await run(resolve('scripts/validate-manifest.mjs'), []);

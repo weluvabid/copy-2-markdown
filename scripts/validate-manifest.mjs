@@ -42,6 +42,20 @@ for (const script of manifest.content_scripts ?? []) {
 await assertFile('content.js', 'injected content script');
 await assertFile('assets/fonts/LICENSE.txt', 'Atkinson Hyperlegible font licence');
 
+for (const command of ['copy-page-markdown', 'copy-selection-markdown']) {
+  assert(
+    Boolean(manifest.commands?.[command]?.suggested_key?.default),
+    `shortcut is missing: ${command}`,
+  );
+}
+
+assert(
+  manifest.web_accessible_resources?.some((entry) =>
+    entry.resources?.includes('assets/fonts/*.otf'),
+  ),
+  'bundled fonts must be web-accessible to isolated content UI',
+);
+
 const assetFiles = await readdir(resolve(distDirectory, 'assets'));
 
 assert(

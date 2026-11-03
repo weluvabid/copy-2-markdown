@@ -7,27 +7,45 @@
     <title>Copy 2 Markdown</title>
     <link rel="stylesheet" href="./popup.css" />
   </head>
-  <body>
+  <body class="popup-document">
     <main class="popup" aria-labelledby="title">
       <header class="header">
-        <div class="mark" aria-hidden="true">M↓</div>
-        <div class="heading">
-          <h1 id="title">Copy 2 Markdown</h1>
-          <p>Clean Markdown. One click.</p>
-        </div>
+        <span class="brand-mark" aria-hidden="true" id="brand-icon"></span>
+        <h1 id="title">Copy 2 Markdown</h1>
       </header>
       <section class="actions" aria-label="Copy actions">
-        <button class="action action-primary" type="button" data-action="page">
-          <span>Copy page</span><span class="action-symbol" aria-hidden="true">↓</span>
+        <button class="action" type="button" data-action="page" disabled>
+          <span class="action-icon" aria-hidden="true"></span>
+          <span class="action-label">Copy page as MD</span>
         </button>
-        <button class="action" type="button" data-action="selection">
-          <span>Copy selection</span><span class="action-symbol" aria-hidden="true">↗</span>
-        </button>
-        <button class="action" type="button" data-action="link">
-          <span>Copy link</span><span class="action-symbol" aria-hidden="true">↗</span>
+        <button class="action" type="button" data-action="link" disabled>
+          <span class="action-icon" aria-hidden="true"></span>
+          <span class="action-label">Copy link as MD</span>
         </button>
       </section>
-      <p id="status" class="status" role="status" aria-live="polite">Ready when you are.</p>
+      <div class="status-slot">
+        <p
+          id="status"
+          class="status"
+          data-state="unavailable"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <span class="status-icon" id="status-icon" aria-hidden="true"></span>
+          <span class="status-label">Unavailable on this page.</span>
+        </p>
+      </div>
+      <footer class="footer">
+        <a
+          href="https://github.com/weluvabid/copy-2-markdown"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span class="footer-icon" id="source-icon" aria-hidden="true"></span>
+          <span>Source code</span>
+        </a>
+      </footer>
     </main>
     <script type="module" src="./index.ts"></script>
   </body>
