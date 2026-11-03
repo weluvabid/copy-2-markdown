@@ -69,37 +69,41 @@ function registerContextMenus(): void {
       return;
     }
 
-    void getContextMenuTitles().then((titles) => {
-      const entries = [
-        {
-          id: MENU_IDS.page,
-          title: titles.page,
-          contexts: ['page', 'link', 'selection'] as chrome.contextMenus.ContextType[],
-          documentUrlPatterns: ['http://*/*', 'https://*/*'],
-        },
-        {
-          id: MENU_IDS.selection,
-          title: titles.selection,
-          contexts: ['selection'] as chrome.contextMenus.ContextType[],
-          documentUrlPatterns: ['http://*/*', 'https://*/*'],
-        },
-        {
-          id: MENU_IDS.link,
-          title: titles.link,
-          contexts: ['all'] as chrome.contextMenus.ContextType[],
-        },
-      ];
+    getContextMenuTitles()
+      .then((titles) => {
+        const entries = [
+          {
+            id: MENU_IDS.page,
+            title: titles.page,
+            contexts: ['page', 'link', 'selection'],
+            documentUrlPatterns: ['http://*/*', 'https://*/*'],
+          },
+          {
+            id: MENU_IDS.selection,
+            title: titles.selection,
+            contexts: ['selection'],
+            documentUrlPatterns: ['http://*/*', 'https://*/*'],
+          },
+          {
+            id: MENU_IDS.link,
+            title: titles.link,
+            contexts: ['all'],
+          },
+        ] satisfies chrome.contextMenus.CreateProperties[];
 
-      for (const entry of entries) {
-        chrome.contextMenus.create(entry, () => {
-          const error = chrome.runtime.lastError;
+        for (const entry of entries) {
+          chrome.contextMenus.create(entry, () => {
+            const error = chrome.runtime.lastError;
 
-          if (error) {
-            console.error(`Copy 2 Markdown could not register ${entry.id}.`, error.message);
-          }
-        });
-      }
-    });
+            if (error) {
+              console.error(`Copy 2 Markdown could not register ${entry.id}.`, error.message);
+            }
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('Copy 2 Markdown could not register context menus.', error);
+      });
   });
 }
 
@@ -185,17 +189,21 @@ chrome.runtime.onStartup.addListener(registerContextMenus);
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (typeof tab?.id !== 'number') {
-    void reportOperationFailure(
+    reportOperationFailure(
       undefined,
       new Error(copy.errors.tabUnavailable),
       'context-menu action',
-    );
+    ).catch((error: unknown) => {
+      console.error('Copy 2 Markdown could not report the context-menu failure.', error);
+    });
 
     return;
   }
 
   if (info.menuItemId === MENU_IDS.link) {
-    void copyLinkInBackground(tab, info.linkUrl);
+    copyLinkInBackground(tab, info.linkUrl).catch((error: unknown) => {
+      console.error('Copy 2 Markdown link action failed unexpectedly.', error);
+    });
 
     return;
   }
@@ -213,7 +221,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 
   if (request) {
-    void dispatchCopy(tab.id, request);
+    dispatchCopy(tab.id, request).catch((error: unknown) => {
+      console.error('Copy 2 Markdown context-menu action failed unexpectedly.', error);
+    });
   }
 });
 
@@ -249,5 +259,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
     }
   }
 
-  void dispatchShortcut();
+  dispatchShortcut().catch((error: unknown) => {
+    console.error('Copy 2 Markdown shortcut failed unexpectedly.', error);
+  });
 });

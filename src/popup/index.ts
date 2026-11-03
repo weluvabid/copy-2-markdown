@@ -283,5 +283,20 @@ for (const button of buttons) {
   });
 }
 
-void loadShortcuts();
-void resolveActiveTab();
+loadShortcuts().catch((error: unknown) => {
+  console.error('Copy 2 Markdown could not initialise keyboard shortcuts.', error);
+  shortcutLabels.forEach((element) => {
+    element.textContent = copy.notifications.shortcutUnavailable;
+  });
+});
+
+resolveActiveTab().catch((error: unknown) => {
+  console.error('Copy 2 Markdown could not initialise the popup.', error);
+  activeTab = undefined;
+  buttons.forEach((button) => {
+    button.disabled = true;
+    button.title = copy.states.unavailable;
+  });
+  showUnavailable();
+  showToast(copy.errors.copyFailed, 'error');
+});
