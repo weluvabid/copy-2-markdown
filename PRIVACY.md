@@ -18,7 +18,7 @@ Chrome itself manages extension installation, permissions, browser shortcuts, an
 
 ## Storage and sharing
 
-Copy 2 Markdown does not create an account, maintain a remote database, sell personal information, or share extension-accessed webpage content with the developer. The extension does not intentionally persist copied webpage content on a developer-controlled service.
+Copy 2 Markdown does not create an account, maintain a remote database, sell personal information, or share extension-accessed webpage content with the developer. The extension does not persist copied webpage content on a developer-controlled service.
 
 The browser's clipboard is updated only when you invoke a copy action. Clipboard contents are subject to the browser and operating system's normal clipboard behaviour and controls.
 
