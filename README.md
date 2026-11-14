@@ -49,7 +49,7 @@ shortcut.
 - **Extraction has a fallback.** Readability is useful for article pages, but not every useful page
   is an article. When it cannot produce enough content, a cleaned semantic root or the body is used
   instead.
-- **Filtering is deliberately layered.** Structural elements, semantic controls, and a narrow set
+- **Filtering uses separate layers.** Structural elements, semantic controls, and a narrow set
   of framework UI patterns are handled separately. Framework class names alone are not treated as
   proof that an arbitrary element is disposable.
 - **Clipboard work stays out of the page.** An extension-owned offscreen document handles clipboard
@@ -134,11 +134,6 @@ tests/
   conversion/       Markdown and adversarial conversion tests
   shared/           Page support and shortcut tests
 ```
-
-The conversion module is independent of Chrome APIs and can be tested directly with HTML fragments.
-The bundled Atkinson Hyperlegible font retains its own licence in
-`src/assets/fonts/LICENSE.txt`; that licence is separate from the project licence and is copied into
-`dist/assets/fonts/` during builds.
 
 ## Documentation
 

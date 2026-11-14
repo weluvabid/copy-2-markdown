@@ -32,7 +32,7 @@ Filtering policies are composed in `src/content/filtering/index.ts`:
   forms, and native controls that do not belong in copied reading material.
 - **Semantic UI** removes explicitly interactive roles such as toolbars, menus, tab lists, and
   tooltips.
-- **Framework UI** handles a deliberately narrow set of known interface patterns from common
+- **Framework UI** handles a narrow set of known interface patterns from common
   component and utility ecosystems.
 
 The framework policies are split by concern under `src/content/filtering/framework/`. This keeps
@@ -40,7 +40,7 @@ framework-specific selectors visible and reviewable instead of hiding them in on
 list.
 
 A class name is not sufficient evidence that an entire element is disposable. The framework rules
-are intentionally narrow because documentation pages often use the same frameworks for both
+stay narrow because documentation pages often use the same frameworks for both
 content and controls.
 
 ## Visually hidden content
@@ -68,5 +68,3 @@ insufficient page content and empty selections also produce explicit errors, whi
 surfaces through its action feedback.
 
 The extraction tests cover the page and selection paths, including fallback behaviour and filtering.
-The website compatibility checks are part of the project's completed manual validation; this
-document describes the implementation rather than treating that validation as an outstanding task.
